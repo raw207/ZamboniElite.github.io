@@ -2,175 +2,196 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Zamboni: Orb Hunter</title>
+    <title>Cyber Zamboni: Pro-Classic</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Press+Start+2P&display=swap');
-        body { margin: 0; background: #000; font-family: 'Orbitron', sans-serif; overflow: hidden; color: white; }
-        #ui-layer { position: absolute; width: 100%; height: 100%; z-index: 100; background: rgba(0,0,10,0.95); display: flex; align-items: center; justify-content: center; }
-        .menu-box { text-align: center; background: #050510; padding: 40px; border: 3px solid #00ffff; border-radius: 15px; box-shadow: 0 0 40px #00ffff55; width: 450px; }
-        h1 { font-size: 28px; color: #00ffff; text-shadow: 0 0 10px #00ffff; font-family: 'Press Start 2P'; margin-bottom: 30px; }
-        .btn { background: #111; border: 1px solid #00ffff; color: #00ffff; padding: 12px; margin: 8px 0; width: 100%; cursor: pointer; font-family: 'Orbitron'; font-weight: 900; transition: 0.2s; }
-        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
-        .garage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .skin-btn { border: 1px solid #444; padding: 10px; font-size: 10px; cursor: pointer; background: #000; }
-        .skin-btn.locked { color: #555; }
-        .skin-btn.selected { border-color: #00ff00; background: #00ff0022; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        body { margin: 0; background: #020205; font-family: 'Orbitron', sans-serif; color: white; overflow: hidden; }
+        
+        #menu-layer { 
+            position: absolute; width: 100%; height: 100%; z-index: 100; 
+            background: radial-gradient(circle, #0a0a25 0%, #000 100%); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+        
+        .main-title { font-size: 50px; color: #00ffff; text-shadow: 0 0 20px #00ffff; margin-bottom: 20px; font-weight: 900; }
+        .menu-options { display: flex; flex-direction: column; gap: 12px; width: 340px; }
+        
+        .btn { 
+            background: rgba(0, 255, 255, 0.05); border: 2px solid #00ffff; color: #00ffff; 
+            padding: 16px; cursor: pointer; font-family: 'Orbitron'; font-weight: 700; 
+            transition: 0.3s; text-transform: uppercase; text-align: center; font-size: 14px;
+        }
+        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 30px #00ffff; }
+
+        #garage-overlay { 
+            display: none; position: absolute; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); z-index: 110; flex-direction: column; 
+            align-items: center; justify-content: center; 
+        }
+        .skin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .skin-item { 
+            border: 2px solid #333; padding: 20px; width: 160px; text-align: center; 
+            cursor: pointer; background: #111; transition: 0.2s;
+        }
+        .skin-item.locked { opacity: 0.4; border-color: #ff0055; cursor: not-allowed; }
+        .skin-item.selected { border-color: #00ff00; background: rgba(0,255,0,0.1); }
+        
         #game-container { width: 100vw; height: 100vh; display: none; }
     </style>
 </head>
 <body>
 
-    <div id="ui-layer">
-        <div class="menu-box" id="main-menu">
-            <h1>ORB HUNTER</h1>
-            <p id="hi-score" style="color:#00ffff">MAX ORBS: 0</p>
-            <button class="btn" onclick="startMode('story')">STORY MODE</button>
-            <button class="btn" onclick="startMode('endless')">ENDLESS MODE</button>
-            <button class="btn" onclick="startMode('comp')">COMPETITIVE</button>
-            <button class="btn" onclick="showGarage()">CUSTOMIZE</button>
+    <div id="menu-layer">
+        <div class="main-title">CYBER ZAMBONI</div>
+        <div style="margin-bottom: 20px; letter-spacing: 3px;">BEST: <span id="hi-val-display">0</span></div>
+        <div class="menu-options">
+            <div class="btn" onclick="startGame('story')">Story Mode</div>
+            <div class="btn" onclick="startGame('endless')">Endless Mode</div>
+            <div class="btn" onclick="startGame('comp')">Competitive Mode</div>
+            <div class="btn" onclick="toggleGarage(true)">Customize Tab</div>
         </div>
+    </div>
 
-        <div class="menu-box" id="garage-menu" style="display:none;">
-            <h1>GARAGE</h1>
-            <div class="garage-grid" id="skin-list"></div>
-            <button class="btn" onclick="showMain()">BACK</button>
-        </div>
+    <div id="garage-overlay">
+        <h1 style="color:#00ffff; font-weight:900;">GARAGE</h1>
+        <div class="skin-grid" id="skin-list"></div>
+        <div class="btn" style="margin-top: 40px; width: 220px;" onclick="toggleGarage(false)">BACK TO MENU</div>
     </div>
 
     <div id="game-container"></div>
 
     <script>
-    let save = JSON.parse(localStorage.getItem('z_orb_v1')) || { hi: 0, skin: 'red' };
-    let currentMode = 'endless';
+        let gameState = JSON.parse(localStorage.getItem('zamboni_save_v3')) || { hi: 0, skin: 'standard' };
+        let activeMode = 'endless';
 
-    const SKINS = [
-        { id: 'red', name: 'BASIC RED', color: 0xff0000, req: 0 },
-        { id: 'blue', name: 'NEON BLUE', color: 0x00ffff, req: 0 },
-        { id: 'mario', name: 'MARIO RIG', color: 0xff0000, req: 20 }, // 20 orbs
-        { id: 'lambo', name: 'LAMBO-Z', color: 0xffcc00, req: 50 }   // 50 orbs
-    ];
+        const SKINS = [
+            { id: 'standard', name: 'Classic Red', color: '#ff0000', req: 0 },
+            { id: 'neon', name: 'Neon Blue', color: '#00ffff', req: 0 },
+            { id: 'mario', name: 'Mario/Luigi', color: '#ff3333', req: 500 },
+            { id: 'lambo', name: 'Lambo-Z', color: '#ffcc00', req: 1000 }
+        ];
 
-    function showGarage() {
-        document.getElementById('main-menu').style.display = 'none';
-        document.getElementById('garage-menu').style.display = 'block';
-        const list = document.getElementById('skin-list');
-        list.innerHTML = '';
-        SKINS.forEach(s => {
-            const locked = save.hi < s.req;
-            const div = document.createElement('div');
-            div.className = `skin-btn ${locked ? 'locked' : ''} ${save.skin === s.id ? 'selected' : ''}`;
-            div.innerHTML = `<strong>${s.name}</strong><br>${locked ? 'REQ: '+s.req+' ORBS' : 'EQUIP'}`;
-            if(!locked) div.onclick = () => { save.skin = s.id; localStorage.setItem('z_orb_v1', JSON.stringify(save)); showGarage(); };
-            list.appendChild(div);
-        });
-    }
+        function toggleGarage(show) {
+            const g = document.getElementById('garage-overlay');
+            g.style.display = show ? 'flex' : 'none';
+            if(show) renderSkins();
+        }
 
-    function showMain() {
-        document.getElementById('garage-menu').style.display = 'none';
-        document.getElementById('main-menu').style.display = 'block';
-        document.getElementById('hi-score').innerText = "MAX ORBS COLLECTED: " + save.hi;
-    }
-    showMain();
+        function renderSkins() {
+            const list = document.getElementById('skin-list');
+            list.innerHTML = '';
+            document.getElementById('hi-val-display').innerText = gameState.hi;
+            
+            SKINS.forEach(s => {
+                const isLocked = gameState.hi < s.req;
+                const div = document.createElement('div');
+                div.className = `skin-item ${isLocked ? 'locked' : ''} ${gameState.skin === s.id ? 'selected' : ''}`;
+                div.innerHTML = `<strong>${s.name}</strong><br><small>${isLocked ? 'LOCKED ('+s.req+')' : 'AVAILABLE'}</small>`;
+                if(!isLocked) {
+                    div.onclick = () => { gameState.skin = s.id; save(); renderSkins(); };
+                }
+                list.appendChild(div);
+            });
+        }
 
-    function startMode(mode) {
-        currentMode = mode;
-        document.getElementById('ui-layer').style.display = 'none';
-        document.getElementById('game-container').style.display = 'block';
-        new Phaser.Game({
-            type: Phaser.AUTO, width: 1000, height: 700, parent: 'game-container',
-            physics: { default: 'arcade' }, scene: { preload, create, update }
-        });
-    }
+        function save() { localStorage.setItem('zamboni_save_v3', JSON.stringify(gameState)); }
 
-    function preload() {
-        SKINS.forEach(s => {
-            let canvas = this.textures.createCanvas('z_' + s.id, 60, 35);
-            let ctx = canvas.context;
-            ctx.fillStyle = '#' + s.color.toString(16).padStart(6, '0');
-            ctx.fillRect(0,0,60,35);
-            canvas.refresh();
-        });
+        function startGame(mode) {
+            activeMode = mode;
+            document.getElementById('menu-layer').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            initPhaser();
+        }
 
-        // 8-BIT SKULL
-        let sk = this.textures.createCanvas('skull', 40, 40);
-        let sCtx = sk.context;
-        sCtx.fillStyle = '#ffffff'; sCtx.fillRect(10,0,20,10); sCtx.fillRect(5,10,30,20); sCtx.fillRect(10,30,20,10);
-        sCtx.fillStyle = '#000000'; sCtx.fillRect(10,15,5,5); sCtx.fillRect(25,15,5,5);
-        sk.refresh();
+        function initPhaser() {
+            const config = {
+                type: Phaser.AUTO,
+                width: window.innerWidth,
+                height: window.innerHeight,
+                parent: 'game-container',
+                physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
+                scene: { preload, create, update }
+            };
+            new Phaser.Game(config);
+        }
 
-        // ORB
-        let orb = this.textures.createCanvas('orb', 20, 20);
-        let oCtx = orb.context;
-        oCtx.fillStyle = '#ffff00'; oCtx.beginPath(); oCtx.arc(10,10,8,0,7); oCtx.fill();
-        orb.refresh();
-    }
+        function preload() {
+            // Generate Zamboni Textures based on Garage Selection
+            SKINS.forEach(s => {
+                let canvas = this.textures.createCanvas('z_' + s.id, 64, 40);
+                let ctx = canvas.context;
+                ctx.fillStyle = s.color;
+                ctx.fillRect(5, 5, 54, 30);
+                ctx.fillStyle = '#111';
+                ctx.fillRect(45, 0, 10, 10); ctx.fillRect(45, 30, 10, 10); // Tires
+                canvas.refresh();
+            });
+        }
 
-    let player, skull, orbs, cursors, score = 0, scoreTxt, safeZone, bots;
+        let player, cursors, score = 0, scoreTxt, bots, obstacles;
 
-    function create() {
-        // HQ ICE RINK
-        let g = this.add.graphics();
-        g.fillStyle(0xe0f7ff); g.fillRoundedRect(50,50,900,600,50); 
-        g.lineStyle(6, 0xffffff); g.strokeRoundedRect(50,50,900,600,50);
+        function create() {
+            // HIGH QUALITY RINK RENDER
+            let g = this.add.graphics();
+            g.fillStyle(0xeaf9ff); g.fillRoundedRect(50, 50, window.innerWidth-100, window.innerHeight-100, 40); // Ice
+            g.lineStyle(8, 0xffffff); g.strokeRoundedRect(50, 50, window.innerWidth-100, window.innerHeight-100, 40); // Boards
+            
+            // Markings
+            g.lineStyle(5, 0xff0000, 0.5); g.lineBetween(window.innerWidth/2, 50, window.innerWidth/2, window.innerHeight-50);
+            g.lineStyle(5, 0x0000ff, 0.3); 
+            g.lineBetween(window.innerWidth*0.3, 50, window.innerWidth*0.3, window.innerHeight-50);
+            g.lineBetween(window.innerWidth*0.7, 50, window.innerWidth*0.7, window.innerHeight-50);
+            g.strokeCircle(window.innerWidth/2, window.innerHeight/2, 90);
 
-        safeZone = this.add.rectangle(500, 350, 150, 150, 0x00ff00, 0.2);
-        this.physics.add.existing(safeZone, true);
+            player = this.physics.add.sprite(window.innerWidth/2, window.innerHeight - 150, 'z_' + gameState.skin);
+            player.setCollideWorldBounds(true);
+            player.setDamping(true);
+            player.setDrag(0.95);
 
-        player = this.physics.add.sprite(500, 600, 'z_' + save.skin);
-        player.setCollideWorldBounds(true);
+            scoreTxt = this.add.text(80, 80, 'SCORE: 0', { font: 'bold 30px Orbitron', color: '#000' });
+            cursors = this.input.keyboard.createCursorKeys();
 
-        skull = this.physics.add.sprite(100, 100, 'skull').setTint(0xff0000);
-        
-        orbs = this.physics.add.group();
-        spawnOrb();
-
-        scoreTxt = this.add.text(70, 70, 'ORBS: 0', { font: 'bold 24px Orbitron', color: '#000' });
-        cursors = this.input.keyboard.createCursorKeys();
-
-        // ORB COLLECTION
-        this.physics.add.overlap(player, orbs, (p, o) => {
-            o.destroy();
-            score++;
-            scoreTxt.setText("ORBS: " + score);
-            spawnOrb();
-        });
-
-        // SKULL DEATH
-        this.physics.add.overlap(player, skull, () => {
-            let inSafe = Phaser.Geom.Intersects.RectangleToRectangle(player.getBounds(), safeZone.getBounds());
-            if(!inSafe) {
-                if(score > save.hi) save.hi = score;
-                localStorage.setItem('z_orb_v1', JSON.stringify(save));
-                location.reload();
+            // COMPETITIVE BOTS
+            bots = this.physics.add.group();
+            if(activeMode === 'comp') {
+                for(let i=0; i<3; i++) {
+                    let b = bots.create(Phaser.Math.Between(100, 800), 200, 'z_neon').setTint(0x555555);
+                    b.setCollideWorldBounds(true); b.setBounce(1); b.setVelocity(150, 150);
+                }
             }
-        });
 
-        // COMP BOTS
-        bots = this.physics.add.group();
-        if(currentMode === 'comp') {
-            for(let i=0; i<2; i++) {
-                let b = bots.create(Phaser.Math.Between(100,900), 200, 'z_blue').setTint(0x666666);
-                b.setCollideWorldBounds(true); b.setBounce(1); b.setVelocity(100, 100);
+            // OBSTACLES (The "Old Version" Logic)
+            obstacles = this.physics.add.group();
+            this.time.addEvent({
+                delay: 1200, loop: true,
+                callback: () => {
+                    let obs = obstacles.create(Phaser.Math.Between(100, window.innerWidth-100), -50, 'z_standard').setTint(0x000000);
+                    obs.setVelocityY(250 + (score/10));
+                }
+            });
+
+            this.physics.add.overlap(player, [bots, obstacles], () => {
+                if(score > gameState.hi) { gameState.hi = score; save(); }
+                location.reload();
+            });
+        }
+
+        function update() {
+            score++;
+            scoreTxt.setText(activeMode.toUpperCase() + ": " + score);
+
+            // Version 3 Precision Steering
+            if (cursors.left.isDown) player.setAngularVelocity(-250);
+            else if (cursors.right.isDown) player.setAngularVelocity(250);
+            else player.setAngularVelocity(0);
+
+            if (cursors.up.isDown) {
+                this.physics.velocityFromRotation(player.rotation, 400, player.body.velocity);
+            } else if (cursors.down.isDown) {
+                this.physics.velocityFromRotation(player.rotation, -180, player.body.velocity);
             }
         }
-    }
-
-    function spawnOrb() {
-        orbs.create(Phaser.Math.Between(100, 900), Phaser.Math.Between(100, 600), 'orb');
-    }
-
-    function update() {
-        this.physics.moveToObject(skull, player, 140 + (score * 5));
-
-        if (cursors.left.isDown) player.setAngularVelocity(-300);
-        else if (cursors.right.isDown) player.setAngularVelocity(300);
-        else player.setAngularVelocity(0);
-
-        if (cursors.up.isDown) this.physics.velocityFromRotation(player.rotation, 400, player.body.velocity);
-        else if (cursors.down.isDown) this.physics.velocityFromRotation(player.rotation, -200, player.body.velocity);
-        else player.setVelocity(0);
-    }
     </script>
 </body>
 </html>
