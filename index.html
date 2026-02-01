@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Cyber Zamboni: Precision Edition</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Zamboni: Pro Series</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
@@ -11,8 +12,9 @@
             margin: 0; 
             background: #020202; 
             display: flex; 
-            justify-content: center; 
+            flex-direction: column;
             align-items: center; 
+            justify-content: center; 
             height: 100vh; 
             overflow: hidden; 
             font-family: 'Orbitron', sans-serif;
@@ -21,363 +23,271 @@
 
         #game-container {
             position: relative;
-            box-shadow: 0 0 80px rgba(0, 255, 255, 0.15);
-            border: 8px solid #222;
-            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+            border: 4px solid #333;
+            border-radius: 12px;
             overflow: hidden;
+            background: #000;
         }
 
-        /* UI OVERLAYS */
         .overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 10, 0.95);
-            display: none; /* Hidden by default */
+            background: rgba(5, 5, 15, 0.9);
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 100;
+            z-index: 10;
             text-align: center;
         }
 
-        h1 { color: #00ffff; font-size: 52px; margin: 0 0 10px 0; text-shadow: 0 0 20px #00ffff; letter-spacing: 4px; }
-        h2 { color: #ff0055; font-size: 32px; margin: 10px 0 30px 0; text-shadow: 0 0 10px #ff0055; }
-        p { font-size: 18px; color: #ccc; max-width: 600px; line-height: 1.5; }
+        h1 { color: #00ffff; font-size: 48px; margin: 0; text-shadow: 0 0 15px #00ffff; }
+        .score-display { font-size: 24px; color: #ff0055; margin-bottom: 20px; }
 
-        .btn-group { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+        .btn-menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
 
-        .btn {
-            background: linear-gradient(45deg, #111, #222);
+        button {
+            background: #111;
             border: 2px solid #00ffff;
-            color: #fff;
-            padding: 15px 30px;
+            color: #00ffff;
+            padding: 12px 24px;
             font-family: 'Orbitron', sans-serif;
-            font-size: 20px;
+            font-weight: bold;
             cursor: pointer;
-            text-transform: uppercase;
             transition: 0.3s;
-            min-width: 200px;
-            clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%);
+            text-transform: uppercase;
         }
 
-        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 25px #00ffff; transform: scale(1.05); }
-        .btn.locked { border-color: #555; color: #555; pointer-events: none; background: #111; }
-        
-        /* SKINS GRID */
-        .skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-        .skin-card {
-            border: 1px solid #444; padding: 10px; cursor: pointer; transition: 0.2s;
-            display: flex; flex-direction: column; align-items: center;
+        button:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 20px #00ffff;
         }
-        .skin-card:hover { border-color: #fff; background: #222; }
-        .skin-card.active { border-color: #00ff00; background: #003300; }
-        .skin-icon { width: 40px; height: 30px; margin-bottom: 5px; background: #555; }
-        .skin-name { font-size: 12px; }
-        .lock-msg { font-size: 10px; color: #ff0055; margin-top: 2px; }
 
-        #achievements-list { text-align: left; background: #111; padding: 20px; border: 1px solid #333; width: 60%; }
-        .ach-item { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; }
+        .skin-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+
+        .skin-item {
+            padding: 10px;
+            border: 1px solid #444;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .skin-item.locked {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: #ff0055;
+        }
+
+        .skin-item.selected {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .stats-board {
+            background: #111;
+            border: 1px solid #333;
+            padding: 15px;
+            width: 80%;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <div id="menu-overlay" class="overlay" style="display: flex;">
+        <div id="menu-ui" class="overlay">
             <h1>CYBER ZAMBONI</h1>
-            <p>DRIVE. SURVIVE. CONQUER THE ICE.</p>
-            <div class="btn-group">
-                <button class="btn" onclick="startGame('story')">STORY MODE</button>
-                <button class="btn" onclick="startGame('endless')">ENDLESS MODE</button>
+            <p>PRECISION TRACTION EDITION</p>
+            
+            <div class="stats-board">
+                <div>HIGH SCORE: <span id="high-score-val">0</span></div>
             </div>
-            <div class="btn-group">
-                <button class="btn" onclick="showGarage()">GARAGE / SKINS</button>
-                <button class="btn" onclick="showAchievements()">ACHIEVEMENTS</button>
+
+            <div class="skin-grid" id="skin-selector">
+                </div>
+
+            <div class="btn-menu">
+                <button onclick="startGame()">START ENGINE</button>
             </div>
         </div>
 
-        <div id="garage-overlay" class="overlay">
-            <h1>GARAGE</h1>
-            <p>SELECT YOUR RIDE</p>
-            <div class="skin-grid" id="skin-list"></div>
-            <button class="btn" onclick="closeOverlay()">BACK</button>
-        </div>
-
-        <div id="achievements-overlay" class="overlay">
-            <h1>CAREER STATS</h1>
-            <div id="achievements-list">
-                <div class="ach-item"><span>HIGH SCORE:</span> <span id="disp-highscore">0</span></div>
-            </div>
-            <button class="btn" onclick="closeOverlay()">BACK</button>
-        </div>
-
-        <div id="gameover-overlay" class="overlay">
-            <h1>CRASHED!</h1>
-            <h2 id="final-score">SCORE: 0</h2>
-            <p id="unlock-msg" style="color: #00ff00; font-weight: bold;"></p>
-            <div class="btn-group">
-                <button class="btn" onclick="restartLevel()">RESTART LEVEL</button>
-                <button class="btn" onclick="resetToMenu()">MAIN MENU</button>
-            </div>
+        <div id="death-ui" class="overlay" style="display:none;">
+            <h1 style="color: #ff0055;">CRASHED</h1>
+            <div class="score-display">SCORE: <span id="final-score">0</span></div>
+            <button onclick="location.reload()">BACK TO MENU</button>
         </div>
     </div>
 
     <script>
-    // --- SAVE SYSTEM ---
-    const saveData = JSON.parse(localStorage.getItem('cyberZamboni_v2')) || {
+    // --- DATA & SKINS ---
+    const SKINS = [
+        { id: 'red', name: 'CLASSIC', color: 0xff0000, req: 0 },
+        { id: 'blue', name: 'NEON BLUE', color: 0x0088ff, req: 0 },
+        { id: 'green', name: 'TOXIC', color: 0x00ff00, req: 0 },
+        { id: 'mario', name: 'PLUMBER', color: 0xff0000, req: 500, special: 'mario' },
+        { id: 'lambo', name: 'LAMBO-Z', color: 0xffcc00, req: 800, special: 'lambo' },
+        { id: 'void', name: 'VOID', color: 0x222222, req: 1200 }
+    ];
+
+    let gameState = JSON.parse(localStorage.getItem('zamboni_save')) || {
         highScore: 0,
-        currentSkin: 'default',
-        unlockedSkins: ['default', 'blue', 'green', 'pink', 'noir']
+        currentSkin: 'red'
     };
 
-    const skinsDB = {
-        'default': { name: 'CLASSIC RED', color: '#ff0000', type: 'standard', req: 0 },
-        'blue': { name: 'ICE BLUE', color: '#0088ff', type: 'standard', req: 0 },
-        'green': { name: 'TOXIC GREEN', color: '#00ff00', type: 'standard', req: 0 },
-        'pink': { name: 'NEON PINK', color: '#ff00cc', type: 'standard', req: 0 },
-        'noir': { name: 'STEALTH', color: '#333333', type: 'standard', req: 0 },
-        'mario': { name: 'PLUMBER BROS', color: '#ff0000', type: 'mario', req: 500 },
-        'lambo': { name: 'LAMBO-Z', color: '#ffcc00', type: 'lambo', req: 800 },
-        'gold': { name: 'GOLDEN GLIDER', color: '#ffd700', type: 'standard', req: 1000 }
-    };
-
-    function saveGame() {
-        localStorage.setItem('cyberZamboni_v2', JSON.stringify(saveData));
+    function save() {
+        localStorage.setItem('zamboni_save', JSON.stringify(gameState));
     }
 
-    // --- GAME CONFIG ---
-    let game;
-    let currentMode = 'endless';
+    // --- UI LOGIC ---
+    function renderSkins() {
+        const container = document.getElementById('skin-selector');
+        container.innerHTML = '';
+        SKINS.forEach(skin => {
+            const isLocked = gameState.highScore < skin.req;
+            const isSelected = gameState.currentSkin === skin.id;
+            const div = document.createElement('div');
+            div.className = `skin-item ${isLocked ? 'locked' : ''} ${isSelected ? 'selected' : ''}`;
+            div.innerHTML = `<strong>${skin.name}</strong><br>${isLocked ? 'REQ: ' + skin.req : 'UNLOCKED'}`;
+            if (!isLocked) {
+                div.onclick = () => {
+                    gameState.currentSkin = skin.id;
+                    save();
+                    renderSkins();
+                };
+            }
+            container.appendChild(div);
+        });
+        document.getElementById('high-score-val').innerText = gameState.highScore;
+    }
+    renderSkins();
 
+    // --- GAME ENGINE ---
     const config = {
         type: Phaser.AUTO,
         width: 1000,
         height: 700,
         parent: 'game-container',
-        backgroundColor: '#050510',
-        physics: { default: 'arcade', arcade: { fps: 60 } },
+        physics: {
+            default: 'arcade',
+            arcade: { gravity: { y: 0 }, debug: false }
+        },
         scene: { preload, create, update }
     };
 
+    let player, cursors, scoreText, skulls, score = 0;
+
     function preload() {
-        // SKINS
-        Object.keys(skinsDB).forEach(key => {
-            let skin = skinsDB[key];
-            let canvas = this.textures.createCanvas('zamboni_' + key, 64, 40);
+        // Draw the Zamboni textures dynamically
+        SKINS.forEach(skin => {
+            let canvas = this.textures.createCanvas('ship_' + skin.id, 60, 40);
             let ctx = canvas.context;
             
-            if (skin.type === 'lambo') {
-                ctx.fillStyle = skin.color;
-                ctx.beginPath(); ctx.moveTo(60, 20); ctx.lineTo(10, 20); ctx.lineTo(0, 10); ctx.lineTo(10, 0); ctx.lineTo(50, 0); ctx.lineTo(64, 15); ctx.fill();
-                ctx.fillStyle = '#000'; ctx.fillRect(10, 2, 30, 14);
-                ctx.fillStyle = '#111'; ctx.fillRect(4, 20, 14, 6); ctx.fillRect(44, 20, 14, 6);
-            } else if (skin.type === 'mario') {
-                ctx.fillStyle = '#cc0000'; ctx.fillRect(4, 4, 56, 32);
-                ctx.fillStyle = '#00aa00'; ctx.fillRect(40, 0, 16, 12);
-                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(32, 20, 10, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = '#000000'; ctx.font = 'bold 12px Arial'; ctx.fillText('M', 27, 24);
-                ctx.fillStyle = '#111'; ctx.fillRect(0, 0, 64, 4); ctx.fillRect(0, 36, 64, 4);
+            if (skin.special === 'lambo') {
+                ctx.fillStyle = '#ffcc00';
+                ctx.beginPath(); ctx.moveTo(60,20); ctx.lineTo(10,40); ctx.lineTo(0,35); ctx.lineTo(10,5); ctx.lineTo(60,20); ctx.fill();
+            } else if (skin.special === 'mario') {
+                ctx.fillStyle = '#ff0000'; ctx.fillRect(0,0,60,40);
+                ctx.fillStyle = '#0000ff'; ctx.fillRect(0,10,20,20);
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(40,20,10,0,Math.PI*2); ctx.fill();
             } else {
-                ctx.fillStyle = skin.color; ctx.fillRect(4, 4, 56, 32);
-                ctx.fillStyle = '#cccccc'; ctx.fillRect(44, 2, 16, 12);
-                ctx.fillStyle = '#111'; ctx.fillRect(10, 10, 14, 18);
-                ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 64, 5); ctx.fillRect(0, 35, 64, 5);
-                if(key === 'gold') { ctx.strokeStyle='#fff'; ctx.strokeRect(4,4,56,32); }
+                ctx.fillStyle = '#' + skin.color.toString(16).padStart(6, '0');
+                ctx.fillRect(0, 5, 50, 30);
+                ctx.fillStyle = '#333'; ctx.fillRect(40, 0, 15, 10); ctx.fillRect(40, 30, 15, 10);
             }
             canvas.refresh();
         });
 
-        // SKULL
-        let s = this.textures.createCanvas('skull', 32, 32);
-        let sx = s.context;
-        sx.fillStyle = '#eee'; sx.fillRect(6, 2, 20, 20); sx.fillRect(10, 22, 12, 6);
-        sx.fillStyle = '#000'; sx.fillRect(8, 8, 6, 6); sx.fillRect(18, 8, 6, 6); sx.fillRect(12, 18, 2, 2); sx.fillRect(18, 18, 2, 2);
-        s.refresh();
+        // Simple Enemy Texture
+        let sc = this.textures.createCanvas('skull', 30, 30);
+        let sctx = sc.context;
+        sctx.fillStyle = '#ff0055'; sctx.fillRect(5,5,20,20);
+        sc.refresh();
     }
-
-    let player, skulls, pucks, cursors, scoreText;
-    let score = 0;
-    let level = 1;
-    let isDead = false;
 
     function create() {
-        this.cameras.main.setBackgroundColor('#050510');
+        // DETAILED RINK
+        let bg = this.add.graphics();
+        bg.fillStyle(0x001122, 1); bg.fillRect(0,0,1000,700); // Dark Floor
         
-        let g = this.add.graphics();
-        // High Quality Rink Drawing
-        g.fillStyle(0xddeeff, 0.05); g.fillRoundedRect(50, 50, 900, 600, 50);
-        g.lineStyle(10, 0xffffff, 1); g.strokeRoundedRect(50, 50, 900, 600, 50);
-        g.lineStyle(4, 0x00aaff, 1); g.strokeRoundedRect(46, 46, 908, 608, 54);
-        g.lineStyle(6, 0xcc0000, 0.8); g.strokeLineShape(new Phaser.Geom.Line(500, 50, 500, 650));
-        g.lineStyle(6, 0x0033cc, 0.8); g.strokeLineShape(new Phaser.Geom.Line(300, 50, 300, 650)); g.strokeLineShape(new Phaser.Geom.Line(700, 50, 700, 650));
-        g.lineStyle(4, 0x0033cc, 0.8); g.strokeCircle(500, 350, 80);
-        g.fillStyle(0xcc0000, 1); g.fillCircle(500, 350, 8);
-        g.lineStyle(2, 0xcc0000, 1); g.fillStyle(0xcc0000, 0.2);
-        g.strokeCircle(100, 350, 40); g.fillCircle(100, 350, 40);
-        g.strokeCircle(900, 350, 40); g.fillCircle(900, 350, 40);
-        g.lineStyle(3, 0xcc0000, 0.8);
-        g.strokeCircle(200, 150, 60); g.fillCircle(200, 150, 6); g.strokeCircle(200, 550, 60); g.fillCircle(200, 550, 6);
-        g.strokeCircle(800, 150, 60); g.fillCircle(800, 150, 6); g.strokeCircle(800, 550, 60); g.fillCircle(800, 550, 6);
+        // Ice Surface
+        bg.fillStyle(0xeefaff, 1); 
+        bg.fillRoundedRect(50, 50, 900, 600, 60);
+        
+        // Markings
+        bg.lineStyle(8, 0xffffff, 1); bg.strokeRoundedRect(50, 50, 900, 600, 60); // Boards
+        bg.lineStyle(5, 0xee0000, 0.5); bg.lineBetween(500, 50, 500, 650); // Center Red
+        bg.lineStyle(5, 0x0000ee, 0.4); bg.lineBetween(350, 50, 350, 650); bg.lineBetween(650, 50, 650, 650); // Blue Lines
+        bg.strokeCircle(500, 350, 80); // Center Circle
 
-        this.physics.world.setBounds(50, 50, 900, 600);
-
-        // PLAYER SETUP
-        player = this.physics.add.sprite(500, 550, 'zamboni_' + saveData.currentSkin);
+        // PLAYER
+        player = this.physics.add.sprite(500, 600, 'ship_' + gameState.currentSkin);
         player.setCollideWorldBounds(true);
-        // NO DRIFT SETTINGS
-        player.setDrag(0); 
-        player.setAngularDrag(0);
-        
+        player.setDamping(true);
+        player.setDrag(0.99); // No sliding
+
+        // ENEMIES
         skulls = this.physics.add.group();
-        skulls.create(500, 100, 'skull').setScale(2).setCollideWorldBounds(true).setBounce(1);
+        this.time.addEvent({ delay: 2000, callback: spawnSkull, callbackScope: this, loop: true });
 
-        pucks = this.physics.add.group();
-        spawnPucks.call(this);
+        // OVERLAP
+        this.physics.add.overlap(player, skulls, (p, s) => {
+            this.physics.pause();
+            if (score > gameState.highScore) {
+                gameState.highScore = score;
+                save();
+            }
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('death-ui').style.display = 'flex';
+        }, null, this);
 
-        scoreText = this.add.text(70, 70, '0', { fontFamily: 'Orbitron', fontSize: '40px', fill: '#00ffff' });
-
-        this.physics.add.overlap(player, pucks, collectPuck, null, this);
-        this.physics.add.overlap(player, skulls, hitSkull, null, this);
-
+        scoreText = this.add.text(60, 60, '0', { fontFamily: 'Orbitron', fontSize: '32px', color: '#000' });
         cursors = this.input.keyboard.createCursorKeys();
-        
-        score = 0; level = 1; isDead = false;
     }
 
-    function spawnPucks() {
-        for(let i=0; i<10; i++) {
-            let p = this.add.circle(Phaser.Math.Between(100, 900), Phaser.Math.Between(100, 600), 6, 0xffffff);
-            this.physics.add.existing(p);
-            pucks.add(p);
-        }
-    }
-
-    function collectPuck(player, puck) {
-        puck.destroy();
-        score += 10;
-        scoreText.setText(score);
-        
-        if (currentMode === 'story') {
-            if (score === 100 && level === 1) {
-                level = 2;
-                this.cameras.main.flash(500);
-            }
-            if (score === 300 && level === 2) {
-                level = 3;
-                skulls.create(100, 100, 'skull').setScale(2).setTint(0xff0000);
-            }
-        }
-        if (pucks.countActive(true) === 0) spawnPucks.call(this);
+    function spawnSkull() {
+        let x = Phaser.Math.Between(100, 900);
+        let s = skulls.create(x, 0, 'skull');
+        s.setVelocityY(150 + (score/10));
     }
 
     function update() {
-        if (isDead) return;
+        score++;
+        scoreText.setText("METERS CLEANED: " + score);
 
-        // --- NEW PRECISION MOVEMENT LOGIC ---
-        // 1. Rotation (Instant)
+        // --- PRECISION MOVEMENT ---
         if (cursors.left.isDown) {
-            player.setAngularVelocity(-250);
+            player.setAngularVelocity(-300);
         } else if (cursors.right.isDown) {
-            player.setAngularVelocity(250);
+            player.setAngularVelocity(300);
         } else {
             player.setAngularVelocity(0);
         }
 
-        // 2. Velocity (Instant Grip - No Slide)
         if (cursors.up.isDown) {
-            this.physics.velocityFromRotation(player.rotation, 350, player.body.velocity);
-        } else if (cursors.down.isDown) {
-            this.physics.velocityFromRotation(player.rotation, -200, player.body.velocity);
+            this.physics.velocityFromRotation(player.rotation, 400, player.body.velocity);
         } else {
-            // STOP INSTANTLY IF NO GAS
-            player.setVelocity(0);
+            player.setVelocity(0); // Instant stop when keys released
         }
-
-        // Enemy AI
-        skulls.getChildren().forEach(skull => {
-            this.physics.moveToObject(skull, player, 180 + (score * 0.1));
-        });
     }
 
-    function hitSkull() {
-        if (isDead) return;
-        isDead = true;
-        this.physics.pause();
-        player.setTint(0x555555);
-
-        let newUnlock = "";
-        if (score > saveData.highScore) saveData.highScore = score;
-
-        if (score >= 500 && !saveData.unlockedSkins.includes('mario')) {
-            saveData.unlockedSkins.push('mario');
-            newUnlock = "UNLOCKED: PLUMBER BROS SKIN!";
-        }
-        if (score >= 800 && !saveData.unlockedSkins.includes('lambo')) {
-            saveData.unlockedSkins.push('lambo');
-            newUnlock = "UNLOCKED: LAMBO-Z SKIN!";
-        }
-        if (score >= 1000 && !saveData.unlockedSkins.includes('gold')) {
-            saveData.unlockedSkins.push('gold');
-            newUnlock = "UNLOCKED: GOLDEN GLIDER!";
-        }
-        saveGame();
-
-        document.getElementById('final-score').innerText = 'SCORE: ' + score;
-        document.getElementById('unlock-msg').innerText = newUnlock;
-        document.getElementById('gameover-overlay').style.display = 'flex';
-    }
-
-    function startGame(mode) {
-        currentMode = mode;
-        document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none');
-        if (game) game.destroy(true);
-        game = new Phaser.Game(config);
-    }
-
-    function showGarage() {
-        document.getElementById('menu-overlay').style.display = 'none';
-        document.getElementById('garage-overlay').style.display = 'flex';
-        const list = document.getElementById('skin-list');
-        list.innerHTML = '';
-        Object.keys(skinsDB).forEach(key => {
-            let s = skinsDB[key];
-            let isUnlocked = saveData.unlockedSkins.includes(key);
-            let isSelected = (saveData.currentSkin === key);
-            let div = document.createElement('div');
-            div.className = `skin-card ${isSelected ? 'active' : ''}`;
-            if (!isUnlocked) div.style.opacity = '0.5';
-            div.innerHTML = `<div class="skin-icon" style="background:${s.color}"></div><div class="skin-name">${s.name}</div>${!isUnlocked ? `<div class="lock-msg">REQ: ${s.req} PTS</div>` : ''}`;
-            div.onclick = () => {
-                if (isUnlocked) {
-                    saveData.currentSkin = key;
-                    saveGame();
-                    showGarage();
-                }
-            };
-            list.appendChild(div);
-        });
-    }
-
-    function showAchievements() {
-        document.getElementById('menu-overlay').style.display = 'none';
-        document.getElementById('achievements-overlay').style.display = 'flex';
-        document.getElementById('disp-highscore').innerText = saveData.highScore;
-    }
-
-    function closeOverlay() {
-        document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none');
-        document.getElementById('menu-overlay').style.display = 'flex';
-    }
-
-    function restartLevel() {
-        document.getElementById('gameover-overlay').style.display = 'none';
-        game.destroy(true);
-        game = new Phaser.Game(config);
-    }
-
-    function resetToMenu() {
-        document.getElementById('gameover-overlay').style.display = 'none';
-        if (game) game.destroy(true);
-        document.getElementById('menu-overlay').style.display = 'flex';
+    function startGame() {
+        document.getElementById('menu-ui').style.display = 'none';
+        new Phaser.Game(config);
     }
     </script>
 </body>
