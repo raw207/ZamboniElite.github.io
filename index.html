@@ -2,98 +2,179 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Cyber Zamboni: Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Zamboni: Pro Series</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-        body { margin: 0; background: #050505; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Orbitron', sans-serif; color: #fff; overflow: hidden; }
-        #game-container { position: relative; border: 4px solid #333; box-shadow: 0 0 50px #00ffff33; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; text-align: center; }
-        .btn { background: #00ffff; color: #000; padding: 12px 25px; border: none; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin: 10px; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); transition: 0.2s; }
-        .btn:hover { transform: scale(1.1); background: #fff; }
-        .skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px; }
-        .skin { padding: 8px; border: 1px solid #444; font-size: 10px; cursor: pointer; }
-        .skin.locked { opacity: 0.3; border-color: red; }
-        .skin.active { border-color: #00ff00; background: #00ff0022; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #020205; overflow: hidden; font-family: 'Orbitron', sans-serif; color: white; }
+        #ui-layer { position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; background: radial-gradient(circle, #0a0a20 0%, #020205 100%); }
+        .panel { text-align: center; background: rgba(255, 255, 255, 0.03); padding: 40px; border: 2px solid #00ffff; border-radius: 20px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); max-width: 600px; }
+        
+        h1 { font-size: 42px; margin: 0 0 10px; color: #00ffff; text-shadow: 0 0 10px #00ffff; }
+        .stat-text { color: #ff0055; margin-bottom: 20px; font-weight: bold; }
+        
+        /* GARAGE STYLE */
+        .garage-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0; }
+        .skin-card { border: 1px solid #444; padding: 15px; cursor: pointer; transition: 0.3s; background: #111; position: relative; }
+        .skin-card:hover { border-color: #fff; background: #222; }
+        .skin-card.active { border-color: #00ff00; background: rgba(0, 255, 0, 0.1); }
+        .skin-card.locked { opacity: 0.4; cursor: not-allowed; border-color: #ff0055; }
+        .skin-card.locked::after { content: 'LOCKED'; position: absolute; bottom: 5px; right: 5px; font-size: 10px; color: #ff0055; }
+
+        .btn-main { background: #00ffff; color: #000; padding: 15px 40px; border: none; font-family: 'Orbitron'; font-weight: 900; font-size: 18px; cursor: pointer; transition: 0.3s; margin-top: 20px; text-transform: uppercase; width: 100%; }
+        .btn-main:hover { background: #fff; box-shadow: 0 0 20px #fff; }
+        
+        #game-container { width: 100%; height: 100%; display: none; }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="menu" class="overlay">
-        <h1 style="color:#00ffff; text-shadow: 0 0 15px #00ffff;">CYBER ZAMBONI</h1>
-        <div id="stats" style="margin-bottom: 10px;">HIGH SCORE: 0</div>
-        <div class="skin-grid" id="skin-list"></div>
-        <button class="btn" onclick="start()">START GAME</button>
+    <div id="ui-layer">
+        <div class="panel" id="main-menu">
+            <h1>CYBER ZAMBONI</h1>
+            <div class="stat-text" id="high-score-display">HIGH SCORE: 0</div>
+            
+            <div style="font-size: 14px; color: #aaa;">-- GARAGE / SELECT SKIN --</div>
+            <div class="garage-grid" id="garage">
+                </div>
+
+            <button class="btn-main" onclick="launchGame()">Start Engine</button>
+        </div>
     </div>
-</div>
 
-<script>
-// --- SAVE & DATA ---
-let storage = JSON.parse(localStorage.getItem('zamboni_v3')) || { hi: 0, skin: 'red' };
-const SKINS = [
-    { id: 'red', n: 'CLASSIC', c: '#ff0000', r: 0 },
-    { id: 'blue', n: 'ICE', c: '#0088ff', r: 0 },
-    { id: 'mario', n: 'PLUMBER', c: '#ff0000', r: 500, spec: 'm' },
-    { id: 'lambo', n: 'LAMBO-Z', c: '#ffcc00', r: 800, spec: 'l' }
-];
+    <div id="game-container"></div>
 
-function updateMenu() {
-    document.getElementById('stats').innerText = `HIGH SCORE: ${storage.hi}`;
-    const list = document.getElementById('skin-list');
-    list.innerHTML = '';
-    SKINS.forEach(s => {
-        let lock = storage.hi < s.r;
-        let div = document.createElement('div');
-        div.className = `skin ${lock ? 'locked' : ''} ${storage.skin === s.id ? 'active' : ''}`;
-        div.innerHTML = `${s.n}<br>${lock ? 'REQ: '+s.r : 'OWNED'}`;
-        if(!lock) div.onclick = () => { storage.skin = s.id; localStorage.setItem('zamboni_v3', JSON.stringify(storage)); updateMenu(); };
-        list.appendChild(div);
-    });
-}
-updateMenu();
+    <script>
+        // --- DATA SYSTEM ---
+        const SKINS = [
+            { id: 'red', name: 'Standard Red', color: '#ff0000', req: 0, type: 'basic' },
+            { id: 'blue', name: 'Arctic Blue', color: '#00ccff', req: 0, type: 'basic' },
+            { id: 'mario', name: 'Plumber Bros', color: '#ff0000', req: 500, type: 'mario' },
+            { id: 'lambo', name: 'Lambo-Z', color: '#ffcc00', req: 800, type: 'lambo' }
+        ];
 
-// --- GAME ---
-function start() {
-    document.getElementById('menu').style.display = 'none';
-    const game = new Phaser.Game({
-        type: Phaser.AUTO, width: 1000, height: 700, parent: 'game-container',
-        physics: { default: 'arcade' },
-        scene: { preload, create, update }
-    });
-}
+        let save = JSON.parse(localStorage.getItem('zamboni_save_v4')) || { high: 0, skin: 'red' };
 
-function preload() {
-    SKINS.forEach(s => {
-        let canvas = this.textures.createCanvas('z_' + s.id, 64, 40);
-        let ctx = canvas.context;
-        ctx.fillStyle = s.c;
-        if(s.spec === 'l') { // Lambo shape
-            ctx.beginPath(); ctx.moveTo(60,20); ctx.lineTo(10,38); ctx.lineTo(0,20); ctx.lineTo(10,2); ctx.fill();
-        } else if(s.spec === 'm') { // Mario colors
-            ctx.fillRect(0,0,60,40); ctx.fillStyle="#0000ff"; ctx.fillRect(10,10,20,20);
-            ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(45,20,8,0,7); ctx.fill();
-        } else {
-            ctx.fillRect(5,5,50,30); ctx.fillStyle="#333"; ctx.fillRect(45,0,10,10); ctx.fillRect(45,30,10,10);
+        function updateUI() {
+            document.getElementById('high-score-display').innerText = `HIGH SCORE: ${save.high}`;
+            const garage = document.getElementById('garage');
+            garage.innerHTML = '';
+
+            SKINS.forEach(s => {
+                const isLocked = save.high < s.req;
+                const isActive = save.skin === s.id;
+                const card = document.createElement('div');
+                card.className = `skin-card ${isLocked ? 'locked' : ''} ${isActive ? 'active' : ''}`;
+                card.innerHTML = `<strong>${s.name}</strong><br><small>${isLocked ? 'Reach ' + s.req : 'Unlocked'}</small>`;
+                
+                if (!isLocked) {
+                    card.onclick = () => {
+                        save.skin = s.id;
+                        localStorage.setItem('zamboni_save_v4', JSON.stringify(save));
+                        updateUI();
+                    };
+                }
+                garage.appendChild(card);
+            });
         }
-        canvas.refresh();
-    });
-}
+        updateUI();
 
-let player, cursors, score = 0, scoreTxt;
+        // --- GAME ENGINE ---
+        function launchGame() {
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
 
-function create() {
-    // HIGH DETAIL RINK
-    let g = this.add.graphics();
-    g.fillStyle(0x0a0a15); g.fillRect(0,0,1000,700);
-    g.fillStyle(0xe0f7ff); g.fillRoundedRect(50,50,900,600,60);
-    g.lineStyle(6, 0xffffff); g.strokeRoundedRect(50,50,900,600,60);
-    g.lineStyle(4, 0xff0000, 0.5); g.lineBetween(500,50,500,650); // Red line
-    g.lineStyle(4, 0x0000ff, 0.3); g.lineBetween(300,50,300,650); g.lineBetween(700,50,700,650); // Blue lines
-    g.strokeCircle(500, 350, 70);
+            const config = {
+                type: Phaser.AUTO,
+                width: window.innerWidth,
+                height: window.innerHeight,
+                parent: 'game-container',
+                physics: { default: 'arcade' },
+                scene: { preload, create, update }
+            };
 
-    player = this.physics.add.sprite(500, 350, 'z_' + storage.skin);
-    player.setCollideWorldBounds(true);
-    
-    scoreTxt = this.add.text(70, 70, 'CLEANED: 0', { font: 'bold 24px Orbitron', color: '#000' });
-    cursors = this.input.keyboard
+            new Phaser.Game(config);
+        }
+
+        function preload() {
+            // Draw Zamboni Textures
+            SKINS.forEach(s => {
+                let canvas = this.textures.createCanvas('z_' + s.id, 64, 40);
+                let ctx = canvas.context;
+                ctx.fillStyle = s.color;
+                
+                if (s.type === 'lambo') {
+                    ctx.beginPath(); ctx.moveTo(60, 20); ctx.lineTo(15, 38); ctx.lineTo(0, 20); ctx.lineTo(15, 2); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#000'; ctx.fillRect(15, 8, 20, 24);
+                } else if (s.type === 'mario') {
+                    ctx.fillRect(0, 0, 60, 40);
+                    ctx.fillStyle = '#0000ff'; ctx.fillRect(10, 10, 25, 20);
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(45, 20, 10, 0, Math.PI*2); ctx.fill();
+                } else {
+                    ctx.fillRect(5, 5, 50, 30);
+                    ctx.fillStyle = '#111'; ctx.fillRect(45, 0, 10, 10); ctx.fillRect(45, 30, 10, 10);
+                }
+                canvas.refresh();
+            });
+        }
+
+        let player, cursors, score = 0, scoreTxt, enemies;
+
+        function create() {
+            // HIGH DETAIL RINK
+            let g = this.add.graphics();
+            g.fillStyle(0xddf4ff); // Ice color
+            g.fillRect(0, 0, window.innerWidth, window.innerHeight);
+            
+            // Rink Markings
+            g.lineStyle(6, 0xff0000, 0.6); g.lineBetween(window.innerWidth/2, 0, window.innerWidth/2, window.innerHeight);
+            g.lineStyle(6, 0x0000ff, 0.4); g.lineBetween(window.innerWidth*0.3, 0, window.innerWidth*0.3, window.innerHeight);
+            g.lineStyle(6, 0x0000ff, 0.4); g.lineBetween(window.innerWidth*0.7, 0, window.innerWidth*0.7, window.innerHeight);
+            g.strokeCircle(window.innerWidth/2, window.innerHeight/2, 100);
+
+            player = this.physics.add.sprite(window.innerWidth/2, window.innerHeight - 100, 'z_' + save.skin);
+            player.setCollideWorldBounds(true);
+
+            enemies = this.physics.add.group();
+            this.time.addEvent({
+                delay: 1000,
+                callback: () => {
+                    let e = enemies.create(Phaser.Math.Between(50, window.innerWidth-50), -50, 'z_red');
+                    e.setTint(0x000000);
+                    e.setVelocityY(250 + (score/10));
+                },
+                loop: true
+            });
+
+            this.physics.add.overlap(player, enemies, () => {
+                if (score > save.high) save.high = score;
+                localStorage.setItem('zamboni_save_v4', JSON.stringify(save));
+                location.reload(); 
+            });
+
+            scoreTxt = this.add.text(20, 20, 'CLEANED: 0', { font: 'bold 30px Orbitron', color: '#000' });
+            cursors = this.input.keyboard.createCursorKeys();
+        }
+
+        function update() {
+            score++;
+            scoreTxt.setText(`CLEANED: ${score}`);
+
+            // PRECISION MOVEMENT
+            if (cursors.left.isDown) player.setAngularVelocity(-260);
+            else if (cursors.right.isDown) player.setAngularVelocity(260);
+            else player.setAngularVelocity(0);
+
+            if (cursors.up.isDown) {
+                this.physics.velocityFromRotation(player.rotation, 400, player.body.velocity);
+            } else if (cursors.down.isDown) {
+                this.physics.velocityFromRotation(player.rotation, -200, player.body.velocity);
+            } else {
+                player.setVelocity(0); // Instant stop - No Drift
+            }
+        }
+    </script>
+</body>
+</html>
