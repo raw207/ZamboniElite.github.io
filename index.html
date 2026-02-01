@@ -2,293 +2,98 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Zamboni: Pro Series</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
+    <title>Cyber Zamboni: Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-
-        body { 
-            margin: 0; 
-            background: #020202; 
-            display: flex; 
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            overflow: hidden; 
-            font-family: 'Orbitron', sans-serif;
-            color: #fff;
-        }
-
-        #game-container {
-            position: relative;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
-            border: 4px solid #333;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-        }
-
-        .overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 15, 0.9);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            text-align: center;
-        }
-
-        h1 { color: #00ffff; font-size: 48px; margin: 0; text-shadow: 0 0 15px #00ffff; }
-        .score-display { font-size: 24px; color: #ff0055; margin-bottom: 20px; }
-
-        .btn-menu {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        button {
-            background: #111;
-            border: 2px solid #00ffff;
-            color: #00ffff;
-            padding: 12px 24px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            text-transform: uppercase;
-        }
-
-        button:hover {
-            background: #00ffff;
-            color: #000;
-            box-shadow: 0 0 20px #00ffff;
-        }
-
-        .skin-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin: 20px 0;
-            padding: 10px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-        }
-
-        .skin-item {
-            padding: 10px;
-            border: 1px solid #444;
-            cursor: pointer;
-            font-size: 10px;
-        }
-
-        .skin-item.locked {
-            opacity: 0.4;
-            cursor: not-allowed;
-            border-color: #ff0055;
-        }
-
-        .skin-item.selected {
-            border-color: #00ff00;
-            background: rgba(0, 255, 0, 0.1);
-        }
-
-        .stats-board {
-            background: #111;
-            border: 1px solid #333;
-            padding: 15px;
-            width: 80%;
-            margin-top: 10px;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        body { margin: 0; background: #050505; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Orbitron', sans-serif; color: #fff; overflow: hidden; }
+        #game-container { position: relative; border: 4px solid #333; box-shadow: 0 0 50px #00ffff33; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; text-align: center; }
+        .btn { background: #00ffff; color: #000; padding: 12px 25px; border: none; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin: 10px; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); transition: 0.2s; }
+        .btn:hover { transform: scale(1.1); background: #fff; }
+        .skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px; }
+        .skin { padding: 8px; border: 1px solid #444; font-size: 10px; cursor: pointer; }
+        .skin.locked { opacity: 0.3; border-color: red; }
+        .skin.active { border-color: #00ff00; background: #00ff0022; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div id="menu-ui" class="overlay">
-            <h1>CYBER ZAMBONI</h1>
-            <p>PRECISION TRACTION EDITION</p>
-            
-            <div class="stats-board">
-                <div>HIGH SCORE: <span id="high-score-val">0</span></div>
-            </div>
-
-            <div class="skin-grid" id="skin-selector">
-                </div>
-
-            <div class="btn-menu">
-                <button onclick="startGame()">START ENGINE</button>
-            </div>
-        </div>
-
-        <div id="death-ui" class="overlay" style="display:none;">
-            <h1 style="color: #ff0055;">CRASHED</h1>
-            <div class="score-display">SCORE: <span id="final-score">0</span></div>
-            <button onclick="location.reload()">BACK TO MENU</button>
-        </div>
+<div id="game-container">
+    <div id="menu" class="overlay">
+        <h1 style="color:#00ffff; text-shadow: 0 0 15px #00ffff;">CYBER ZAMBONI</h1>
+        <div id="stats" style="margin-bottom: 10px;">HIGH SCORE: 0</div>
+        <div class="skin-grid" id="skin-list"></div>
+        <button class="btn" onclick="start()">START GAME</button>
     </div>
+</div>
 
-    <script>
-    // --- DATA & SKINS ---
-    const SKINS = [
-        { id: 'red', name: 'CLASSIC', color: 0xff0000, req: 0 },
-        { id: 'blue', name: 'NEON BLUE', color: 0x0088ff, req: 0 },
-        { id: 'green', name: 'TOXIC', color: 0x00ff00, req: 0 },
-        { id: 'mario', name: 'PLUMBER', color: 0xff0000, req: 500, special: 'mario' },
-        { id: 'lambo', name: 'LAMBO-Z', color: 0xffcc00, req: 800, special: 'lambo' },
-        { id: 'void', name: 'VOID', color: 0x222222, req: 1200 }
-    ];
+<script>
+// --- SAVE & DATA ---
+let storage = JSON.parse(localStorage.getItem('zamboni_v3')) || { hi: 0, skin: 'red' };
+const SKINS = [
+    { id: 'red', n: 'CLASSIC', c: '#ff0000', r: 0 },
+    { id: 'blue', n: 'ICE', c: '#0088ff', r: 0 },
+    { id: 'mario', n: 'PLUMBER', c: '#ff0000', r: 500, spec: 'm' },
+    { id: 'lambo', n: 'LAMBO-Z', c: '#ffcc00', r: 800, spec: 'l' }
+];
 
-    let gameState = JSON.parse(localStorage.getItem('zamboni_save')) || {
-        highScore: 0,
-        currentSkin: 'red'
-    };
+function updateMenu() {
+    document.getElementById('stats').innerText = `HIGH SCORE: ${storage.hi}`;
+    const list = document.getElementById('skin-list');
+    list.innerHTML = '';
+    SKINS.forEach(s => {
+        let lock = storage.hi < s.r;
+        let div = document.createElement('div');
+        div.className = `skin ${lock ? 'locked' : ''} ${storage.skin === s.id ? 'active' : ''}`;
+        div.innerHTML = `${s.n}<br>${lock ? 'REQ: '+s.r : 'OWNED'}`;
+        if(!lock) div.onclick = () => { storage.skin = s.id; localStorage.setItem('zamboni_v3', JSON.stringify(storage)); updateMenu(); };
+        list.appendChild(div);
+    });
+}
+updateMenu();
 
-    function save() {
-        localStorage.setItem('zamboni_save', JSON.stringify(gameState));
-    }
-
-    // --- UI LOGIC ---
-    function renderSkins() {
-        const container = document.getElementById('skin-selector');
-        container.innerHTML = '';
-        SKINS.forEach(skin => {
-            const isLocked = gameState.highScore < skin.req;
-            const isSelected = gameState.currentSkin === skin.id;
-            const div = document.createElement('div');
-            div.className = `skin-item ${isLocked ? 'locked' : ''} ${isSelected ? 'selected' : ''}`;
-            div.innerHTML = `<strong>${skin.name}</strong><br>${isLocked ? 'REQ: ' + skin.req : 'UNLOCKED'}`;
-            if (!isLocked) {
-                div.onclick = () => {
-                    gameState.currentSkin = skin.id;
-                    save();
-                    renderSkins();
-                };
-            }
-            container.appendChild(div);
-        });
-        document.getElementById('high-score-val').innerText = gameState.highScore;
-    }
-    renderSkins();
-
-    // --- GAME ENGINE ---
-    const config = {
-        type: Phaser.AUTO,
-        width: 1000,
-        height: 700,
-        parent: 'game-container',
-        physics: {
-            default: 'arcade',
-            arcade: { gravity: { y: 0 }, debug: false }
-        },
+// --- GAME ---
+function start() {
+    document.getElementById('menu').style.display = 'none';
+    const game = new Phaser.Game({
+        type: Phaser.AUTO, width: 1000, height: 700, parent: 'game-container',
+        physics: { default: 'arcade' },
         scene: { preload, create, update }
-    };
+    });
+}
 
-    let player, cursors, scoreText, skulls, score = 0;
-
-    function preload() {
-        // Draw the Zamboni textures dynamically
-        SKINS.forEach(skin => {
-            let canvas = this.textures.createCanvas('ship_' + skin.id, 60, 40);
-            let ctx = canvas.context;
-            
-            if (skin.special === 'lambo') {
-                ctx.fillStyle = '#ffcc00';
-                ctx.beginPath(); ctx.moveTo(60,20); ctx.lineTo(10,40); ctx.lineTo(0,35); ctx.lineTo(10,5); ctx.lineTo(60,20); ctx.fill();
-            } else if (skin.special === 'mario') {
-                ctx.fillStyle = '#ff0000'; ctx.fillRect(0,0,60,40);
-                ctx.fillStyle = '#0000ff'; ctx.fillRect(0,10,20,20);
-                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(40,20,10,0,Math.PI*2); ctx.fill();
-            } else {
-                ctx.fillStyle = '#' + skin.color.toString(16).padStart(6, '0');
-                ctx.fillRect(0, 5, 50, 30);
-                ctx.fillStyle = '#333'; ctx.fillRect(40, 0, 15, 10); ctx.fillRect(40, 30, 15, 10);
-            }
-            canvas.refresh();
-        });
-
-        // Simple Enemy Texture
-        let sc = this.textures.createCanvas('skull', 30, 30);
-        let sctx = sc.context;
-        sctx.fillStyle = '#ff0055'; sctx.fillRect(5,5,20,20);
-        sc.refresh();
-    }
-
-    function create() {
-        // DETAILED RINK
-        let bg = this.add.graphics();
-        bg.fillStyle(0x001122, 1); bg.fillRect(0,0,1000,700); // Dark Floor
-        
-        // Ice Surface
-        bg.fillStyle(0xeefaff, 1); 
-        bg.fillRoundedRect(50, 50, 900, 600, 60);
-        
-        // Markings
-        bg.lineStyle(8, 0xffffff, 1); bg.strokeRoundedRect(50, 50, 900, 600, 60); // Boards
-        bg.lineStyle(5, 0xee0000, 0.5); bg.lineBetween(500, 50, 500, 650); // Center Red
-        bg.lineStyle(5, 0x0000ee, 0.4); bg.lineBetween(350, 50, 350, 650); bg.lineBetween(650, 50, 650, 650); // Blue Lines
-        bg.strokeCircle(500, 350, 80); // Center Circle
-
-        // PLAYER
-        player = this.physics.add.sprite(500, 600, 'ship_' + gameState.currentSkin);
-        player.setCollideWorldBounds(true);
-        player.setDamping(true);
-        player.setDrag(0.99); // No sliding
-
-        // ENEMIES
-        skulls = this.physics.add.group();
-        this.time.addEvent({ delay: 2000, callback: spawnSkull, callbackScope: this, loop: true });
-
-        // OVERLAP
-        this.physics.add.overlap(player, skulls, (p, s) => {
-            this.physics.pause();
-            if (score > gameState.highScore) {
-                gameState.highScore = score;
-                save();
-            }
-            document.getElementById('final-score').innerText = score;
-            document.getElementById('death-ui').style.display = 'flex';
-        }, null, this);
-
-        scoreText = this.add.text(60, 60, '0', { fontFamily: 'Orbitron', fontSize: '32px', color: '#000' });
-        cursors = this.input.keyboard.createCursorKeys();
-    }
-
-    function spawnSkull() {
-        let x = Phaser.Math.Between(100, 900);
-        let s = skulls.create(x, 0, 'skull');
-        s.setVelocityY(150 + (score/10));
-    }
-
-    function update() {
-        score++;
-        scoreText.setText("METERS CLEANED: " + score);
-
-        // --- PRECISION MOVEMENT ---
-        if (cursors.left.isDown) {
-            player.setAngularVelocity(-300);
-        } else if (cursors.right.isDown) {
-            player.setAngularVelocity(300);
+function preload() {
+    SKINS.forEach(s => {
+        let canvas = this.textures.createCanvas('z_' + s.id, 64, 40);
+        let ctx = canvas.context;
+        ctx.fillStyle = s.c;
+        if(s.spec === 'l') { // Lambo shape
+            ctx.beginPath(); ctx.moveTo(60,20); ctx.lineTo(10,38); ctx.lineTo(0,20); ctx.lineTo(10,2); ctx.fill();
+        } else if(s.spec === 'm') { // Mario colors
+            ctx.fillRect(0,0,60,40); ctx.fillStyle="#0000ff"; ctx.fillRect(10,10,20,20);
+            ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(45,20,8,0,7); ctx.fill();
         } else {
-            player.setAngularVelocity(0);
+            ctx.fillRect(5,5,50,30); ctx.fillStyle="#333"; ctx.fillRect(45,0,10,10); ctx.fillRect(45,30,10,10);
         }
+        canvas.refresh();
+    });
+}
 
-        if (cursors.up.isDown) {
-            this.physics.velocityFromRotation(player.rotation, 400, player.body.velocity);
-        } else {
-            player.setVelocity(0); // Instant stop when keys released
-        }
-    }
+let player, cursors, score = 0, scoreTxt;
 
-    function startGame() {
-        document.getElementById('menu-ui').style.display = 'none';
-        new Phaser.Game(config);
-    }
-    </script>
-</body>
-</html>
+function create() {
+    // HIGH DETAIL RINK
+    let g = this.add.graphics();
+    g.fillStyle(0x0a0a15); g.fillRect(0,0,1000,700);
+    g.fillStyle(0xe0f7ff); g.fillRoundedRect(50,50,900,600,60);
+    g.lineStyle(6, 0xffffff); g.strokeRoundedRect(50,50,900,600,60);
+    g.lineStyle(4, 0xff0000, 0.5); g.lineBetween(500,50,500,650); // Red line
+    g.lineStyle(4, 0x0000ff, 0.3); g.lineBetween(300,50,300,650); g.lineBetween(700,50,700,650); // Blue lines
+    g.strokeCircle(500, 350, 70);
+
+    player = this.physics.add.sprite(500, 350, 'z_' + storage.skin);
+    player.setCollideWorldBounds(true);
+    
+    scoreTxt = this.add.text(70, 70, 'CLEANED: 0', { font: 'bold 24px Orbitron', color: '#000' });
+    cursors = this.input.keyboard
