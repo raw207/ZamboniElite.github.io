@@ -2,299 +2,217 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Cyber Zamboni HD</title>
+    <title>Cyber Zamboni: Pro Garage</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     <style>
-        body { 
-            margin: 0; 
-            background: #050505; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            overflow: hidden; 
-            font-family: 'Courier New', Courier, monospace;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        body { margin: 0; background: #050505; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Orbitron', sans-serif; }
         
-        #game-container {
-            position: relative;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
-            border: 4px solid #333;
-            border-radius: 8px;
+        #game-container { position: relative; box-shadow: 0 0 50px rgba(0, 255, 255, 0.2); border: 4px solid #333; border-radius: 8px; }
+
+        /* Overlays */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9); display: none; 
+            flex-direction: column; justify-content: center; align-items: center; z-index: 10;
         }
 
-        /* The UI Overlay sits ON TOP of the game canvas */
-        #ui-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none; /* Hidden by default */
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-        }
-
-        h1 { color: #ff0000; font-size: 60px; margin: 0 0 20px 0; text-shadow: 0 0 10px #f00; }
+        h1 { color: #00ffff; font-size: 50px; margin-bottom: 20px; text-shadow: 0 0 15px #00ffff; }
+        .crashed-text { color: #ff0000; text-shadow: 0 0 15px #ff0000; }
         
         .btn {
-            background: #111;
-            color: #fff;
-            border: 2px solid #00ffff;
-            padding: 15px 30px;
-            font-size: 24px;
-            margin: 10px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: 0.2s;
-            min-width: 250px;
-            text-align: center;
-            font-weight: bold;
+            background: #111; color: #fff; border: 2px solid #00ffff;
+            padding: 12px 24px; font-size: 18px; margin: 8px;
+            cursor: pointer; text-transform: uppercase; transition: 0.2s;
+            min-width: 220px; text-align: center; font-weight: bold;
         }
-
         .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
-        .btn-restart { border-color: #00ff00; }
-        .btn-restart:hover { background: #00ff00; box-shadow: 0 0 20px #00ff00; }
+
+        /* Garage Grid */
+        .garage-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            max-height: 300px; overflow-y: auto; padding: 20px;
+        }
+        .skin-card {
+            border: 1px solid #444; padding: 10px; text-align: center;
+            background: #1a1a1a; cursor: pointer; font-size: 12px;
+        }
+        .skin-card:hover { border-color: #00ff00; }
+        .skin-card.selected { background: #004400; border-color: #00ff00; }
+        .locked { opacity: 0.5; color: #ff0055; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <div id="ui-overlay">
-            <h1>CRASHED!</h1>
-            <div class="btn btn-restart" onclick="hardReset('game')">Restart Level</div>
-            <div class="btn" onclick="hardReset('menu')">Main Menu</div>
+        <div id="ui-overlay" class="overlay">
+            <h1 class="crashed-text">SYSTEM CRITICAL</h1>
+            <div class="btn" style="border-color:#00ff00" onclick="hardReset('game')">Reboot Level</div>
+            <div class="btn" onclick="hardReset('menu')">Exit to Terminal</div>
+        </div>
+
+        <div id="garage-overlay" class="overlay">
+            <h1>GARAGE</h1>
+            <div class="garage-grid" id="garage-list"></div>
+            <div class="btn" onclick="toggleGarage(false)">Back</div>
         </div>
     </div>
 
     <script>
-    // --- 1. GAME CONFIGURATION ---
     let gameInstance = null;
-    let currentMode = 'menu'; // 'menu', 'story', 'endless'
-    
-    // We define the config as a function so we can generate a fresh one every time
-    const getConfig = (startScene) => {
-        return {
-            type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            parent: 'game-container',
-            backgroundColor: '#0a0a12',
-            physics: { default: 'arcade', arcade: { debug: false } },
-            scene: startScene
-        };
-    };
+    let currentMode = 'menu';
+    // Load Save Data
+    let savedData = JSON.parse(localStorage.getItem('cz_data')) || { hi: 0, skin: 'standard' };
 
-    // --- 2. THE MAIN MENU SCENE ---
+    const SKINS = [
+        { id: 'standard', name: 'Factory Red', color: '#cc0000', req: 0 },
+        { id: 'cobalt', name: 'Cobalt Blue', color: '#0044ff', req: 0 },
+        { id: 'emerald', name: 'Emerald Gem', color: '#00ff44', req: 50 },
+        { id: 'gold', name: 'Solid Gold', color: '#ffcc00', req: 150 },
+        { id: 'mario', name: 'Plumber Red', color: '#ff0000', req: 500 },
+        { id: 'lambo', name: 'V12 Carbon', color: '#222222', req: 1000 }
+    ];
+
+    const getConfig = (startScene) => ({
+        type: Phaser.AUTO, width: 800, height: 600, parent: 'game-container',
+        backgroundColor: '#050508', physics: { default: 'arcade' }, scene: startScene
+    });
+
+    // --- GARAGE LOGIC ---
+    function toggleGarage(show) {
+        const el = document.getElementById('garage-overlay');
+        el.style.display = show ? 'flex' : 'none';
+        if(show) {
+            const list = document.getElementById('garage-list');
+            list.innerHTML = '';
+            SKINS.forEach(s => {
+                const isLocked = savedData.hi < s.req;
+                const div = document.createElement('div');
+                div.className = `skin-card ${isLocked ? 'locked' : ''} ${savedData.skin === s.id ? 'selected' : ''}`;
+                div.innerHTML = `<strong>${s.name}</strong><br>${isLocked ? 'Score: '+s.req : 'Ready'}`;
+                if(!isLocked) div.onclick = () => { savedData.skin = s.id; save(); toggleGarage(true); };
+                list.appendChild(div);
+            });
+        }
+    }
+    function save() { localStorage.setItem('cz_data', JSON.stringify(savedData)); }
+
+    // --- SCENES ---
     class MenuScene extends Phaser.Scene {
         constructor() { super('MenuScene'); }
         create() {
-            this.add.text(400, 150, 'CYBER ZAMBONI', { fontSize: '60px', fill: '#00ffff', fontStyle: 'bold', stroke: '#00aaaa', strokeThickness: 6 }).setOrigin(0.5);
+            this.add.text(400, 150, 'CYBER ZAMBONI', { fontSize: '50px', fill: '#0ff', fontWeight: '900' }).setOrigin(0.5);
+            this.add.text(400, 200, `TOP SCORE: ${savedData.hi}`, { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
             
-            // Story Button
-            let storyBtn = this.add.rectangle(400, 300, 300, 60, 0x800080).setInteractive({ useHandCursor: true });
-            storyBtn.setStrokeStyle(4, 0xffffff);
-            this.add.text(400, 300, 'STORY MODE', { fontSize: '28px', fill: '#fff' }).setOrigin(0.5);
-            storyBtn.on('pointerdown', () => launchGame('story'));
-
-            // Endless Button
-            let endlessBtn = this.add.rectangle(400, 400, 300, 60, 0x006666).setInteractive({ useHandCursor: true });
-            endlessBtn.setStrokeStyle(4, 0xffffff);
-            this.add.text(400, 400, 'ENDLESS MODE', { fontSize: '28px', fill: '#fff' }).setOrigin(0.5);
-            endlessBtn.on('pointerdown', () => launchGame('endless'));
+            const btnProps = { fontSize: '24px', fill: '#fff', backgroundColor: '#111', padding: 10 };
+            
+            let sBtn = this.add.text(400, 320, ' START MISSION ', btnProps).setOrigin(0.5).setInteractive({useHandCursor:true});
+            sBtn.on('pointerdown', () => launchGame('story'));
+            
+            let gBtn = this.add.text(400, 400, ' ENTER GARAGE ', btnProps).setOrigin(0.5).setInteractive({useHandCursor:true});
+            gBtn.on('pointerdown', () => toggleGarage(true));
         }
     }
 
-    // --- 3. THE GAMEPLAY SCENE ---
     class GameScene extends Phaser.Scene {
         constructor() { super('GameScene'); }
-
         preload() {
-            // -- GENERATE HIGH QUALITY ASSETS --
-            
-            // 1. ZAMBONI (Detailed)
-            let z = this.textures.createCanvas('zamboni', 48, 36);
-            let ctx = z.context;
-            // Body
-            ctx.fillStyle = '#cc0000'; ctx.fillRect(4, 4, 40, 28);
-            ctx.fillStyle = '#990000'; ctx.fillRect(4, 28, 40, 4); // Shadow
-            // Engine Block
-            ctx.fillStyle = '#dddddd'; ctx.fillRect(30, 0, 14, 10);
-            ctx.fillStyle = '#111'; ctx.fillRect(32, 2, 10, 6); // Vent
-            // Seat & Driver
-            ctx.fillStyle = '#333'; ctx.fillRect(8, 8, 12, 14);
-            ctx.fillStyle = '#fff'; ctx.fillRect(10, 10, 8, 8); // Helmet
-            // Treads
-            ctx.fillStyle = '#000'; 
-            ctx.fillRect(0, 0, 48, 4); ctx.fillRect(0, 32, 48, 4);
-            z.refresh();
+            // Detailed Zamboni Generation
+            SKINS.forEach(s => {
+                let canvas = this.textures.createCanvas('z_' + s.id, 48, 36);
+                let ctx = canvas.context;
+                ctx.fillStyle = s.color; ctx.fillRect(4, 4, 40, 28); // Body
+                ctx.fillStyle = '#111'; ctx.fillRect(0,0,10,6); ctx.fillRect(38,0,10,6); // Wheels
+                ctx.fillStyle = '#fff'; ctx.fillRect(10, 10, 8, 8); // Driver Helmet
+                canvas.refresh();
+            });
 
-            // 2. 8-BIT SKULL (Detailed)
-            let s = this.textures.createCanvas('skull', 32, 32);
-            let sCtx = s.context;
-            sCtx.fillStyle = '#ffffff'; 
-            // Cranium
-            sCtx.fillRect(6, 2, 20, 18);
-            // Jaw
-            sCtx.fillRect(10, 20, 12, 8);
-            // Teeth
-            sCtx.fillStyle = '#000';
-            sCtx.fillRect(11, 28, 2, 4); sCtx.fillRect(15, 28, 2, 4); sCtx.fillRect(19, 28, 2, 4);
-            // Eyes
-            sCtx.fillRect(8, 10, 6, 6); sCtx.fillRect(18, 10, 6, 6);
-            // Nose
-            sCtx.fillRect(14, 18, 4, 4);
-            s.refresh();
+            // 8-BIT SKULL
+            let sk = this.textures.createCanvas('skull', 32, 32);
+            let sCtx = sk.context;
+            sCtx.fillStyle = '#fff'; sCtx.fillRect(6, 2, 20, 18); sCtx.fillRect(10, 20, 12, 8);
+            sCtx.fillStyle = '#f00'; sCtx.fillRect(8, 10, 6, 6); sCtx.fillRect(18, 10, 6, 6);
+            sk.refresh();
         }
 
         create() {
             this.setupRink();
-            
-            // Safe Zone
-            this.safeZone = this.add.rectangle(400, 300, 120, 120, 0x00ffff, 0.1);
-            this.safeZone.setStrokeStyle(2, 0x00ffff);
-            this.physics.add.existing(this.safeZone, true);
-
-            // Groups
-            this.pucks = this.physics.add.group();
+            this.orbs = this.physics.add.group();
             this.skulls = this.physics.add.group();
-            this.spawnPucks();
+            this.spawnOrbs();
 
-            // Create Player
-            this.player = this.physics.add.sprite(400, 450, 'zamboni');
+            this.player = this.physics.add.sprite(400, 450, 'z_' + savedData.skin);
+            this.player.setCollideWorldBounds(true);
             
-            // Create Enemy
-            this.skulls.create(400, 100, 'skull').setScale(2);
-
-            // Collisions
-            this.physics.add.collider(this.player, this.walls);
-            this.physics.add.collider(this.skulls, this.walls);
-            this.physics.add.collider(this.skulls, this.safeZone);
+            this.enemy = this.skulls.create(400, 100, 'skull').setScale(1.5);
+            this.enemy.setTint(0xff00ff);
 
             this.score = 0;
-            this.level = 1;
-            this.scoreText = this.add.text(20, 20, 'SCORE: 0', { fontSize: '24px', fill: '#00ffff', fontStyle: 'bold' });
+            this.scoreText = this.add.text(30, 30, 'ORBS: 0', { fontSize: '24px', fill: '#0ff', fontStyle: 'bold' });
 
-            // Interactions
-            this.physics.add.overlap(this.player, this.pucks, (plr, puck) => {
-                puck.destroy();
-                this.score += 10;
-                this.scoreText.setText('SCORE: ' + this.score);
-                this.checkLevel();
-                if(this.pucks.countActive(true) === 0) this.spawnPucks();
+            this.physics.add.overlap(this.player, this.orbs, (p, o) => {
+                o.destroy(); this.score++;
+                this.scoreText.setText('ORBS: ' + this.score);
+                if(this.orbs.countActive(true) === 0) this.spawnOrbs();
             });
 
             this.physics.add.overlap(this.player, this.skulls, () => {
+                if(this.score > savedData.hi) { savedData.hi = this.score; save(); }
                 this.physics.pause();
-                this.player.setTint(0x555555);
-                document.getElementById('ui-overlay').style.display = 'flex'; // SHOW HTML BUTTONS
+                document.getElementById('ui-overlay').style.display = 'flex';
             });
 
             this.cursors = this.input.keyboard.createCursorKeys();
         }
 
         setupRink() {
+            // Enhanced Rink Detail
             let g = this.add.graphics();
-            // Ice Color
-            this.cameras.main.setBackgroundColor('#0a0a15');
+            g.lineStyle(2, 0x00ffff, 0.2);
+            for(let i=0; i<800; i+=40) g.lineBetween(i, 0, i, 600); // Ice Scuffs
             
-            // Red Line
-            g.lineStyle(4, 0xcc0000, 0.4);
-            g.strokeLineShape(new Phaser.Geom.Line(400, 20, 400, 580));
-            
-            // Blue Lines
-            g.lineStyle(4, 0x0033cc, 0.4);
-            g.strokeLineShape(new Phaser.Geom.Line(250, 20, 250, 580));
-            g.strokeLineShape(new Phaser.Geom.Line(550, 20, 550, 580));
-
-            // Faceoff Circles
-            g.lineStyle(2, 0xcc0000, 0.4);
-            g.strokeCircle(400, 300, 70); // Center
-            g.strokeCircle(150, 150, 50); g.strokeCircle(650, 150, 50);
-            g.strokeCircle(150, 450, 50); g.strokeCircle(650, 450, 50);
-
-            // Physics Walls (The Boards)
             this.walls = this.physics.add.staticGroup();
-            const addBoard = (x, y, w, h) => {
-                let b = this.add.rectangle(x, y, w, h, 0x222222);
-                b.setStrokeStyle(3, 0xbc00ff);
-                this.walls.add(b);
-            };
-            addBoard(400, 10, 800, 20); addBoard(400, 590, 800, 20); // Top/Bottom
-            addBoard(10, 300, 20, 600); addBoard(790, 300, 20, 600); // Left/Right
-        }
-
-        spawnPucks() {
-            for(let i=0; i<8; i++) {
-                let p = this.add.circle(Phaser.Math.Between(60, 740), Phaser.Math.Between(60, 540), 5, 0xffffff);
-                p.setStrokeStyle(2, 0x000);
-                this.pucks.add(p);
+            const b = (x,y,w,h) => {
+                let r = this.add.rectangle(x,y,w,h, 0x111122);
+                r.setStrokeStyle(2, 0x00ffff);
+                this.walls.add(r);
             }
+            b(400, 5, 800, 10); b(400, 595, 800, 10); b(5, 300, 10, 600); b(795, 300, 10, 600);
+            this.physics.add.collider(this.player, this.walls);
         }
 
-        checkLevel() {
-            if(currentMode === 'story') {
-                if(this.score >= 100 && this.level === 1) {
-                    this.level = 2;
-                    this.cameras.main.flash(500, 255, 0, 0);
-                    this.cameras.main.setBackgroundColor('#2a0505');
-                }
-                if(this.score >= 300 && this.level === 2) {
-                    this.level = 3;
-                    this.skulls.create(100, 100, 'skull').setScale(2).setTint(0xff0000);
-                }
+        spawnOrbs() {
+            for(let i=0; i<6; i++) {
+                let orb = this.add.circle(Phaser.Math.Between(50, 750), Phaser.Math.Between(50, 550), 8, 0x00ffff);
+                this.orbs.add(orb);
+                this.tweens.add({ targets: orb, scale: 1.5, duration: 800, yoyo: true, repeat: -1 });
             }
         }
 
         update() {
             if(this.physics.world.isPaused) return;
+            this.player.setVelocity(0);
+            const spd = 400; // Max Capability Speed
+            if (this.cursors.left.isDown) { this.player.setVelocityX(-spd); this.player.setAngle(-180); }
+            else if (this.cursors.right.isDown) { this.player.setVelocityX(spd); this.player.setAngle(0); }
+            if (this.cursors.up.isDown) { this.player.setVelocityY(-spd); this.player.setAngle(-90); }
+            else if (this.cursors.down.isDown) { this.player.setVelocityY(spd); this.player.setAngle(90); }
 
-            this.player.body.setVelocity(0);
-            const speed = 340;
-            
-            // Movement + Rotation
-            if (this.cursors.left.isDown) { this.player.setVelocityX(-speed); this.player.setAngle(180); }
-            else if (this.cursors.right.isDown) { this.player.setVelocityX(speed); this.player.setAngle(0); }
-            else if (this.cursors.up.isDown) { this.player.setVelocityY(-speed); this.player.setAngle(-90); }
-            else if (this.cursors.down.isDown) { this.player.setVelocityY(speed); this.player.setAngle(90); }
-
-            // Skull AI
-            this.skulls.getChildren().forEach(skull => {
-                let chaseSpeed = 170 + (this.score * 0.1);
-                this.physics.moveToObject(skull, this.player, chaseSpeed);
-            });
+            this.physics.moveToObject(this.enemy, this.player, 180 + (this.score * 5));
         }
     }
 
-    // --- 4. SYSTEM FUNCTIONS ---
-
-    // Initial Startup
+    // --- SYSTEM ---
     gameInstance = new Phaser.Game(getConfig(MenuScene));
-
-    // Function to Start Game from Menu
     function launchGame(mode) {
         currentMode = mode;
-        // We destroy the menu instance and start the game instance
         gameInstance.destroy(true);
         gameInstance = new Phaser.Game(getConfig(GameScene));
     }
-
-    // THE HARD RESET FUNCTION (Linked to HTML Buttons)
     function hardReset(target) {
-        // 1. Hide the overlay
         document.getElementById('ui-overlay').style.display = 'none';
-
-        // 2. Destroy the current game completely
-        if (gameInstance) {
-            gameInstance.destroy(true);
-        }
-
-        // 3. Re-initialize based on target
-        if (target === 'game') {
-            gameInstance = new Phaser.Game(getConfig(GameScene));
-        } else {
-            gameInstance = new Phaser.Game(getConfig(MenuScene));
-        }
+        if (gameInstance) gameInstance.destroy(true);
+        gameInstance = new Phaser.Game(getConfig(target === 'game' ? GameScene : MenuScene));
     }
     </script>
 </body>
