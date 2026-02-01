@@ -1,212 +1,301 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Cyber Zamboni HD</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
-    <style>
-        body { 
-            margin: 0; 
-            background: #050505; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            overflow: hidden; 
-            font-family: 'Courier New', Courier, monospace;
-        }
-        
-        #game-container {
-            position: relative;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
-            border: 4px solid #333;
-            border-radius: 8px;
-        }
+    <meta charset="UTF-8">
+    <title>Cyber Zamboni HD</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            background: #050505; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
+            border: 4px solid #333;
+            border-radius: 8px;
+        }
 
-        #ui-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none; 
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-        }
+        /* The UI Overlay sits ON TOP of the game canvas */
+        #ui-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
 
-        h1 { color: #ff0000; font-size: 60px; margin: 0 0 20px 0; text-shadow: 0 0 10px #f00; }
-        
-        .btn {
-            background: #111;
-            color: #fff;
-            border: 2px solid #00ffff;
-            padding: 15px 30px;
-            font-size: 24px;
-            margin: 10px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: 0.2s;
-            min-width: 250px;
-            text-align: center;
-            font-weight: bold;
-        }
+        h1 { color: #ff0000; font-size: 60px; margin: 0 0 20px 0; text-shadow: 0 0 10px #f00; }
+        
+        .btn {
+            background: #111;
+            color: #fff;
+            border: 2px solid #00ffff;
+            padding: 15px 30px;
+            font-size: 24px;
+            margin: 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+            min-width: 250px;
+            text-align: center;
+            font-weight: bold;
+        }
 
-        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
-        .btn-restart { border-color: #00ff00; }
-        .btn-restart:hover { background: #00ff00; box-shadow: 0 0 20px #00ff00; }
-    </style>
+        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
+        .btn-restart { border-color: #00ff00; }
+        .btn-restart:hover { background: #00ff00; box-shadow: 0 0 20px #00ff00; }
+    </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div id="ui-overlay">
-            <h1>CRASHED!</h1>
-            <div class="btn btn-restart" onclick="hardReset('game')">Restart Level</div>
-            <div class="btn" onclick="hardReset('menu')">Main Menu</div>
-        </div>
-    </div>
+    <div id="game-container">
+        <div id="ui-overlay">
+            <h1>CRASHED!</h1>
+            <div class="btn btn-restart" onclick="hardReset('game')">Restart Level</div>
+            <div class="btn" onclick="hardReset('menu')">Main Menu</div>
+        </div>
+    </div>
 
-    <script>
-    let gameInstance = null;
-    let currentMode = 'menu'; 
+    <script>
+    // --- 1. GAME CONFIGURATION ---
+    let gameInstance = null;
+    let currentMode = 'menu'; // 'menu', 'story', 'endless'
+    
+    // We define the config as a function so we can generate a fresh one every time
+    const getConfig = (startScene) => {
+        return {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#0a0a12',
+            physics: { default: 'arcade', arcade: { debug: false } },
+            scene: startScene
+        };
+    };
 
-    const getConfig = (startScene) => {
-        return {
-            type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            parent: 'game-container',
-            backgroundColor: '#0a0a12',
-            physics: { default: 'arcade', arcade: { debug: false } },
-            scene: startScene
-        };
-    };
+    // --- 2. THE MAIN MENU SCENE ---
+    class MenuScene extends Phaser.Scene {
+        constructor() { super('MenuScene'); }
+        create() {
+            this.add.text(400, 150, 'CYBER ZAMBONI', { fontSize: '60px', fill: '#00ffff', fontStyle: 'bold', stroke: '#00aaaa', strokeThickness: 6 }).setOrigin(0.5);
+            
+            // Story Button
+            let storyBtn = this.add.rectangle(400, 300, 300, 60, 0x800080).setInteractive({ useHandCursor: true });
+            storyBtn.setStrokeStyle(4, 0xffffff);
+            this.add.text(400, 300, 'STORY MODE', { fontSize: '28px', fill: '#fff' }).setOrigin(0.5);
+            storyBtn.on('pointerdown', () => launchGame('story'));
 
-    class MenuScene extends Phaser.Scene {
-        constructor() { super('MenuScene'); }
-        create() {
-            this.add.text(400, 150, 'CYBER ZAMBONI', { fontSize: '60px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
-            
-            let storyBtn = this.add.rectangle(400, 300, 300, 60, 0x800080).setInteractive({ useHandCursor: true });
-            storyBtn.setStrokeStyle(4, 0xffffff);
-            this.add.text(400, 300, 'STORY MODE', { fontSize: '28px', fill: '#fff' }).setOrigin(0.5);
-            storyBtn.on('pointerdown', () => launchGame('story'));
+            // Endless Button
+            let endlessBtn = this.add.rectangle(400, 400, 300, 60, 0x006666).setInteractive({ useHandCursor: true });
+            endlessBtn.setStrokeStyle(4, 0xffffff);
+            this.add.text(400, 400, 'ENDLESS MODE', { fontSize: '28px', fill: '#fff' }).setOrigin(0.5);
+            endlessBtn.on('pointerdown', () => launchGame('endless'));
+        }
+    }
 
-            let endlessBtn = this.add.rectangle(400, 400, 300, 60, 0x006666).setInteractive({ useHandCursor: true });
-            endlessBtn.setStrokeStyle(4, 0xffffff);
-            this.add.text(400, 400, 'ENDLESS MODE', { fontSize: '28px', fill: '#fff' }).setOrigin(0.5);
-            endlessBtn.on('pointerdown', () => launchGame('endless'));
-        }
-    }
+    // --- 3. THE GAMEPLAY SCENE ---
+    class GameScene extends Phaser.Scene {
+        constructor() { super('GameScene'); }
 
-    class GameScene extends Phaser.Scene {
-        constructor() { super('GameScene'); }
+        preload() {
+            // -- GENERATE HIGH QUALITY ASSETS --
+            
+            // 1. ZAMBONI (Detailed)
+            let z = this.textures.createCanvas('zamboni', 48, 36);
+            let ctx = z.context;
+            // Body
+            ctx.fillStyle = '#cc0000'; ctx.fillRect(4, 4, 40, 28);
+            ctx.fillStyle = '#990000'; ctx.fillRect(4, 28, 40, 4); // Shadow
+            // Engine Block
+            ctx.fillStyle = '#dddddd'; ctx.fillRect(30, 0, 14, 10);
+            ctx.fillStyle = '#111'; ctx.fillRect(32, 2, 10, 6); // Vent
+            // Seat & Driver
+            ctx.fillStyle = '#333'; ctx.fillRect(8, 8, 12, 14);
+            ctx.fillStyle = '#fff'; ctx.fillRect(10, 10, 8, 8); // Helmet
+            // Treads
+            ctx.fillStyle = '#000'; 
+            ctx.fillRect(0, 0, 48, 4); ctx.fillRect(0, 32, 48, 4);
+            z.refresh();
 
-        preload() {
-            // DETAILED ZAMBONI
-            let z = this.textures.createCanvas('zamboni', 48, 36);
-            let ctx = z.context;
-            ctx.fillStyle = '#cc0000'; ctx.fillRect(4, 4, 40, 28);
-            ctx.fillStyle = '#333'; ctx.fillRect(8, 8, 12, 14); // Driver area
-            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 48, 4); ctx.fillRect(0, 32, 48, 4); // Treads
-            z.refresh();
+            // 2. 8-BIT SKULL (Detailed)
+            let s = this.textures.createCanvas('skull', 32, 32);
+            let sCtx = s.context;
+            sCtx.fillStyle = '#ffffff'; 
+            // Cranium
+            sCtx.fillRect(6, 2, 20, 18);
+            // Jaw
+            sCtx.fillRect(10, 20, 12, 8);
+            // Teeth
+            sCtx.fillStyle = '#000';
+            sCtx.fillRect(11, 28, 2, 4); sCtx.fillRect(15, 28, 2, 4); sCtx.fillRect(19, 28, 2, 4);
+            // Eyes
+            sCtx.fillRect(8, 10, 6, 6); sCtx.fillRect(18, 10, 6, 6);
+            // Nose
+            sCtx.fillRect(14, 18, 4, 4);
+            s.refresh();
+        }
 
-            // 8-BIT SKULL
-            let s = this.textures.createCanvas('skull', 32, 32);
-            let sCtx = s.context;
-            sCtx.fillStyle = '#ffffff'; 
-            sCtx.fillRect(6, 2, 20, 18); sCtx.fillRect(10, 20, 12, 8); // Head/Jaw
-            sCtx.fillStyle = '#000'; sCtx.fillRect(8, 10, 6, 6); sCtx.fillRect(18, 10, 6, 6); // Eyes
-            s.refresh();
-        }
+        create() {
+            this.setupRink();
+            
+            // Safe Zone
+            this.safeZone = this.add.rectangle(400, 300, 120, 120, 0x00ffff, 0.1);
+            this.safeZone.setStrokeStyle(2, 0x00ffff);
+            this.physics.add.existing(this.safeZone, true);
 
-        create() {
-            this.setupRink();
-            
-            // Safe Zone
-            this.safeZone = this.add.rectangle(400, 300, 120, 120, 0x00ffff, 0.1);
-            this.safeZone.setStrokeStyle(2, 0x00ffff);
-            this.physics.add.existing(this.safeZone, true);
+            // Groups
+            this.pucks = this.physics.add.group();
+            this.skulls = this.physics.add.group();
+            this.spawnPucks();
 
-            this.orbs = this.physics.add.group();
-            this.skulls = this.physics.add.group();
-            this.spawnOrbs();
+            // Create Player
+            this.player = this.physics.add.sprite(400, 450, 'zamboni');
+            
+            // Create Enemy
+            this.skulls.create(400, 100, 'skull').setScale(2);
 
-            this.player = this.physics.add.sprite(400, 450, 'zamboni');
-            this.skulls.create(400, 100, 'skull').setScale(2);
+            // Collisions
+            this.physics.add.collider(this.player, this.walls);
+            this.physics.add.collider(this.skulls, this.walls);
+            this.physics.add.collider(this.skulls, this.safeZone);
 
-            this.score = 0;
-            this.scoreText = this.add.text(20, 20, 'ORBS: 0', { fontSize: '24px', fill: '#00ffff', fontStyle: 'bold' });
+            this.score = 0;
+            this.level = 1;
+            this.scoreText = this.add.text(20, 20, 'SCORE: 0', { fontSize: '24px', fill: '#00ffff', fontStyle: 'bold' });
 
-            // Physics Logic
-            this.physics.add.collider(this.player, this.walls);
-            this.physics.add.overlap(this.player, this.orbs, (plr, orb) => {
-                orb.destroy();
-                this.score++;
-                this.scoreText.setText('ORBS: ' + this.score);
-                if(this.orbs.countActive(true) === 0) this.spawnOrbs();
-            });
+            // Interactions
+            this.physics.add.overlap(this.player, this.pucks, (plr, puck) => {
+                puck.destroy();
+                this.score += 10;
+                this.scoreText.setText('SCORE: ' + this.score);
+                this.checkLevel();
+                if(this.pucks.countActive(true) === 0) this.spawnPucks();
+            });
 
-            this.physics.add.overlap(this.player, this.skulls, () => {
-                this.physics.pause();
-                this.player.setTint(0x555555);
-                document.getElementById('ui-overlay').style.display = 'flex'; 
-            });
+            this.physics.add.overlap(this.player, this.skulls, () => {
+                this.physics.pause();
+                this.player.setTint(0x555555);
+                document.getElementById('ui-overlay').style.display = 'flex'; // SHOW HTML BUTTONS
+            });
 
-            this.cursors = this.input.keyboard.createCursorKeys();
-        }
+            this.cursors = this.input.keyboard.createCursorKeys();
+        }
 
-        setupRink() {
-            let g = this.add.graphics();
-            this.cameras.main.setBackgroundColor('#0a0a15');
-            g.lineStyle(4, 0xcc0000, 0.4); g.strokeLineShape(new Phaser.Geom.Line(400, 20, 400, 580)); // Center Red
-            this.walls = this.physics.add.staticGroup();
-            const addBoard = (x, y, w, h) => {
-                let b = this.add.rectangle(x, y, w, h, 0x222222);
-                b.setStrokeStyle(3, 0xbc00ff);
-                this.walls.add(b);
-            };
-            addBoard(400, 10, 800, 20); addBoard(400, 590, 800, 20);
-            addBoard(10, 300, 20, 600); addBoard(790, 300, 20, 600);
-        }
+        setupRink() {
+            let g = this.add.graphics();
+            // Ice Color
+            this.cameras.main.setBackgroundColor('#0a0a15');
+            
+            // Red Line
+            g.lineStyle(4, 0xcc0000, 0.4);
+            g.strokeLineShape(new Phaser.Geom.Line(400, 20, 400, 580));
+            
+            // Blue Lines
+            g.lineStyle(4, 0x0033cc, 0.4);
+            g.strokeLineShape(new Phaser.Geom.Line(250, 20, 250, 580));
+            g.strokeLineShape(new Phaser.Geom.Line(550, 20, 550, 580));
 
-        spawnOrbs() {
-            for(let i=0; i<8; i++) {
-                let p = this.add.circle(Phaser.Math.Between(60, 740), Phaser.Math.Between(60, 540), 8, 0xffff00);
-                p.setStrokeStyle(2, 0xffaa00);
-                this.orbs.add(p);
-            }
-        }
+            // Faceoff Circles
+            g.lineStyle(2, 0xcc0000, 0.4);
+            g.strokeCircle(400, 300, 70); // Center
+            g.strokeCircle(150, 150, 50); g.strokeCircle(650, 150, 50);
+            g.strokeCircle(150, 450, 50); g.strokeCircle(650, 450, 50);
 
-        update() {
-            if(this.physics.world.isPaused) return;
-            this.player.body.setVelocity(0);
-            const speed = 340;
-            if (this.cursors.left.isDown) { this.player.setVelocityX(-speed); this.player.setAngle(180); }
-            else if (this.cursors.right.isDown) { this.player.setVelocityX(speed); this.player.setAngle(0); }
-            else if (this.cursors.up.isDown) { this.player.setVelocityY(-speed); this.player.setAngle(-90); }
-            else if (this.cursors.down.isDown) { this.player.setVelocityY(speed); this.player.setAngle(90); }
+            // Physics Walls (The Boards)
+            this.walls = this.physics.add.staticGroup();
+            const addBoard = (x, y, w, h) => {
+                let b = this.add.rectangle(x, y, w, h, 0x222222);
+                b.setStrokeStyle(3, 0xbc00ff);
+                this.walls.add(b);
+            };
+            addBoard(400, 10, 800, 20); addBoard(400, 590, 800, 20); // Top/Bottom
+            addBoard(10, 300, 20, 600); addBoard(790, 300, 20, 600); // Left/Right
+        }
 
-            this.skulls.getChildren().forEach(skull => {
-                this.physics.moveToObject(skull, this.player, 160 + (this.score * 2));
-            });
-        }
-    }
+        spawnPucks() {
+            for(let i=0; i<8; i++) {
+                let p = this.add.circle(Phaser.Math.Between(60, 740), Phaser.Math.Between(60, 540), 5, 0xffffff);
+                p.setStrokeStyle(2, 0x000);
+                this.pucks.add(p);
+            }
+        }
 
-    gameInstance = new Phaser.Game(getConfig(MenuScene));
+        checkLevel() {
+            if(currentMode === 'story') {
+                if(this.score >= 100 && this.level === 1) {
+                    this.level = 2;
+                    this.cameras.main.flash(500, 255, 0, 0);
+                    this.cameras.main.setBackgroundColor('#2a0505');
+                }
+                if(this.score >= 300 && this.level === 2) {
+                    this.level = 3;
+                    this.skulls.create(100, 100, 'skull').setScale(2).setTint(0xff0000);
+                }
+            }
+        }
 
-    function launchGame(mode) {
-        currentMode = mode;
-        gameInstance.destroy(true);
-        gameInstance = new Phaser.Game(getConfig(GameScene));
-    }
+        update() {
+            if(this.physics.world.isPaused) return;
 
-    function hardReset(target) {
-        document.getElementById('ui-overlay').style.display = 'none';
-        if (gameInstance) gameInstance.destroy(true);
-        if (target === 'game') gameInstance = new Phaser.Game(getConfig(GameScene));
-        else gameInstance = new Phaser.Game(getConfig(MenuScene));
-    }
-    </script>
+            this.player.body.setVelocity(0);
+            const speed = 340;
+            
+            // Movement + Rotation
+            if (this.cursors.left.isDown) { this.player.setVelocityX(-speed); this.player.setAngle(180); }
+            else if (this.cursors.right.isDown) { this.player.setVelocityX(speed); this.player.setAngle(0); }
+            else if (this.cursors.up.isDown) { this.player.setVelocityY(-speed); this.player.setAngle(-90); }
+            else if (this.cursors.down.isDown) { this.player.setVelocityY(speed); this.player.setAngle(90); }
+
+            // Skull AI
+            this.skulls.getChildren().forEach(skull => {
+                let chaseSpeed = 170 + (this.score * 0.1);
+                this.physics.moveToObject(skull, this.player, chaseSpeed);
+            });
+        }
+    }
+
+    // --- 4. SYSTEM FUNCTIONS ---
+
+    // Initial Startup
+    gameInstance = new Phaser.Game(getConfig(MenuScene));
+
+    // Function to Start Game from Menu
+    function launchGame(mode) {
+        currentMode = mode;
+        // We destroy the menu instance and start the game instance
+        gameInstance.destroy(true);
+        gameInstance = new Phaser.Game(getConfig(GameScene));
+    }
+
+    // THE HARD RESET FUNCTION (Linked to HTML Buttons)
+    function hardReset(target) {
+        // 1. Hide the overlay
+        document.getElementById('ui-overlay').style.display = 'none';
+
+        // 2. Destroy the current game completely
+        if (gameInstance) {
+            gameInstance.destroy(true);
+        }
+
+        // 3. Re-initialize based on target
+        if (target === 'game') {
+            gameInstance = new Phaser.Game(getConfig(GameScene));
+        } else {
+            gameInstance = new Phaser.Game(getConfig(MenuScene));
+        }
+    }
+    </script>
 </body>
-</html>
+</html> remember this file of the game?
