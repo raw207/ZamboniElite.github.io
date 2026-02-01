@@ -2,21 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Zamboni Pro-Classic</title>
+    <title>Cyber Zamboni: Skull Survival</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Press+Start+2P&display=swap');
         body { margin: 0; background: #000; font-family: 'Orbitron', sans-serif; overflow: hidden; color: white; }
-        #ui-layer { position: absolute; width: 100%; height: 100%; z-index: 100; background: rgba(0,0,10,0.85); display: flex; align-items: center; justify-content: center; }
-        .menu-box { text-align: center; background: #050510; padding: 40px; border: 3px solid #00ffff; border-radius: 15px; box-shadow: 0 0 40px #00ffff55; width: 400px; }
-        h1 { font-size: 38px; color: #00ffff; text-shadow: 0 0 10px #00ffff; margin-top: 0; }
+        #ui-layer { position: absolute; width: 100%; height: 100%; z-index: 100; background: rgba(0,0,10,0.9); display: flex; align-items: center; justify-content: center; }
+        .menu-box { text-align: center; background: #050510; padding: 40px; border: 3px solid #00ffff; border-radius: 15px; box-shadow: 0 0 40px #00ffff55; width: 450px; }
+        h1 { font-size: 32px; color: #ff0055; text-shadow: 0 0 10px #ff0055; font-family: 'Press Start 2P'; margin-bottom: 30px; }
         .btn { background: #111; border: 1px solid #00ffff; color: #00ffff; padding: 12px; margin: 8px 0; width: 100%; cursor: pointer; font-family: 'Orbitron'; font-weight: 900; transition: 0.2s; }
         .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
         
-        /* Garage Grid */
         .garage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
         .skin-btn { border: 1px solid #444; padding: 10px; font-size: 10px; cursor: pointer; background: #000; }
-        .skin-btn.locked { color: #ff0055; border-color: #ff0055; opacity: 0.5; }
+        .skin-btn.locked { color: #555; border-color: #333; }
         .skin-btn.selected { border-color: #00ff00; background: #00ff0022; }
         
         #game-container { width: 100vw; height: 100vh; display: none; }
@@ -26,16 +25,16 @@
 
     <div id="ui-layer">
         <div class="menu-box" id="main-menu">
-            <h1>ZAMBONI PRO</h1>
-            <p id="hi-score">HIGH SCORE: 0</p>
-            <button class="btn" onclick="startMode('story')">STORY MODE</button>
-            <button class="btn" onclick="startMode('endless')">ENDLESS MODE</button>
-            <button class="btn" onclick="startMode('comp')">COMPETITIVE</button>
-            <button class="btn" onclick="showGarage()">CUSTOMIZE</button>
+            <h1>SKULL RUN</h1>
+            <p id="hi-score" style="color:#00ffff">MAX SURVIVAL: 0</p>
+            <button class="btn" onclick="startMode('story')">STORY MODE (CH 1)</button>
+            <button class="btn" onclick="startMode('endless')">ENDLESS SURVIVAL</button>
+            <button class="btn" onclick="startMode('comp')">COMPETITIVE BOTS</button>
+            <button class="btn" onclick="showGarage()">GARAGE / SKINS</button>
         </div>
 
         <div class="menu-box" id="garage-menu" style="display:none;">
-            <h1>GARAGE</h1>
+            <h1 style="font-size: 20px;">CHOOSE YOUR RIG</h1>
             <div class="garage-grid" id="skin-list"></div>
             <button class="btn" onclick="showMain()">BACK</button>
         </div>
@@ -44,14 +43,14 @@
     <div id="game-container"></div>
 
     <script>
-    let save = JSON.parse(localStorage.getItem('z_save_v5')) || { hi: 0, skin: 'red' };
+    let save = JSON.parse(localStorage.getItem('z_skull_v1')) || { hi: 0, skin: 'red' };
     let currentMode = 'endless';
 
     const SKINS = [
-        { id: 'red', name: 'RED LINE', color: 0xff0000, req: 0, spec: 'none' },
-        { id: 'blue', name: 'ICE BLUE', color: 0x00ffff, req: 0, spec: 'none' },
-        { id: 'mario', name: 'MARIO/LUIGI', color: 0xff0000, req: 500, spec: 'mario' },
-        { id: 'lambo', name: 'LAMBORGHINI', color: 0xffcc00, req: 800, spec: 'lambo' }
+        { id: 'red', name: 'BASIC RED', color: 0xff0000, req: 0, type: 'basic' },
+        { id: 'blue', name: 'NEON BLUE', color: 0x00ffff, req: 0, type: 'basic' },
+        { id: 'mario', name: 'MARIO RIG', color: 0xff0000, req: 500, type: 'mario' },
+        { id: 'lambo', name: 'LAMBO-Z', color: 0xffcc00, req: 800, type: 'lambo' }
     ];
 
     function showGarage() {
@@ -63,8 +62,8 @@
             const locked = save.hi < s.req;
             const div = document.createElement('div');
             div.className = `skin-btn ${locked ? 'locked' : ''} ${save.skin === s.id ? 'selected' : ''}`;
-            div.innerHTML = `<strong>${s.name}</strong><br>${locked ? 'REQ: '+s.req : 'SELECT'}`;
-            if(!locked) div.onclick = () => { save.skin = s.id; localStorage.setItem('z_save_v5', JSON.stringify(save)); showGarage(); };
+            div.innerHTML = `<strong>${s.name}</strong><br>${locked ? 'REQ: '+s.req : 'EQUIP'}`;
+            if(!locked) div.onclick = () => { save.skin = s.id; localStorage.setItem('z_skull_v1', JSON.stringify(save)); showGarage(); };
             list.appendChild(div);
         });
     }
@@ -72,7 +71,7 @@
     function showMain() {
         document.getElementById('garage-menu').style.display = 'none';
         document.getElementById('main-menu').style.display = 'block';
-        document.getElementById('hi-score').innerText = "HIGH SCORE: " + save.hi;
+        document.getElementById('hi-score').innerText = "MAX SURVIVAL: " + save.hi;
     }
     showMain();
 
@@ -80,28 +79,21 @@
         currentMode = mode;
         document.getElementById('ui-layer').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
-        initGame();
-    }
-
-    function initGame() {
-        const config = {
-            type: Phaser.AUTO,
-            width: 1000, height: 700,
-            parent: 'game-container',
-            physics: { default: 'arcade' },
-            scene: { preload, create, update }
-        };
-        new Phaser.Game(config);
+        const game = new Phaser.Game({
+            type: Phaser.AUTO, width: 1000, height: 700, parent: 'game-container',
+            physics: { default: 'arcade' }, scene: { preload, create, update }
+        });
     }
 
     function preload() {
+        // Draw Zamboni
         SKINS.forEach(s => {
             let canvas = this.textures.createCanvas('z_' + s.id, 64, 40);
             let ctx = canvas.context;
             ctx.fillStyle = '#' + s.color.toString(16).padStart(6, '0');
-            if(s.spec === 'lambo') {
+            if(s.type === 'lambo') {
                 ctx.beginPath(); ctx.moveTo(64,20); ctx.lineTo(10,40); ctx.lineTo(0,20); ctx.lineTo(10,0); ctx.fill();
-            } else if(s.spec === 'mario') {
+            } else if(s.type === 'mario') {
                 ctx.fillRect(0,0,60,40); ctx.fillStyle = '#0000ff'; ctx.fillRect(0,10,25,20);
                 ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(45,20,8,0,7); ctx.fill();
             } else {
@@ -109,57 +101,81 @@
             }
             canvas.refresh();
         });
+
+        // DRAW 8-BIT SKULL
+        let sk = this.textures.createCanvas('skull', 40, 40);
+        let sCtx = sk.context;
+        sCtx.fillStyle = '#ffffff';
+        sCtx.fillRect(10,0,20,10); sCtx.fillRect(5,10,30,20); sCtx.fillRect(10,30,20,10);
+        sCtx.fillStyle = '#000000'; sCtx.fillRect(10,15,5,5); sCtx.fillRect(25,15,5,5); // Eyes
+        sk.refresh();
     }
 
-    let player, cursors, score = 0, scoreTxt, bots, enemies;
+    let player, skull, cursors, score = 0, scoreTxt, safeZone, bots;
 
     function create() {
-        // THE HIGH QUALITY RINK (Classic Style)
+        // HQ CLASSIC RINK
         let g = this.add.graphics();
-        g.fillStyle(0xe8faff); g.fillRoundedRect(50,50,900,600,50); // High-res Ice
-        g.lineStyle(8, 0xffffff); g.strokeRoundedRect(50,50,900,600,50); // White Boards
-        g.lineStyle(5, 0xff0000, 0.6); g.lineBetween(500,50,500,650); // Red Line
-        g.lineStyle(5, 0x0000ff, 0.4); g.lineBetween(350,50,350,650); g.lineBetween(650,50,650,650); // Blue Lines
-        g.strokeCircle(500,350,80); // Center Circle
+        g.fillStyle(0xd0e8ff); g.fillRoundedRect(50,50,900,600,50); 
+        g.lineStyle(6, 0xffffff); g.strokeRoundedRect(50,50,900,600,50);
+        g.lineStyle(4, 0xff0000, 0.4); g.lineBetween(500,50,500,650);
+        g.lineStyle(4, 0x0000ff, 0.2); g.lineBetween(350,50,350,650); g.lineBetween(650,50,650,650);
+
+        // SAFE ZONE (Green square)
+        safeZone = this.add.rectangle(850, 100, 120, 120, 0x00ff00, 0.3);
+        this.physics.add.existing(safeZone, true);
 
         player = this.physics.add.sprite(500, 600, 'z_' + save.skin);
         player.setCollideWorldBounds(true);
+
+        skull = this.physics.add.sprite(100, 100, 'skull');
+        skull.setTint(0xff0000);
+
+        scoreTxt = this.add.text(70, 70, 'SURVIVED: 0', { font: 'bold 24px Orbitron', color: '#000' });
         cursors = this.input.keyboard.createCursorKeys();
-        
-        scoreTxt = this.add.text(70, 70, 'SCORE: 0', { font: 'bold 24px Orbitron', color: '#000' });
 
-        enemies = this.physics.add.group();
-        this.time.addEvent({ delay: 1000, loop: true, callback: () => {
-            let e = enemies.create(Phaser.Math.Between(100,900), -50, 'z_red').setTint(0x000000).setScale(0.8);
-            e.setVelocityY(200 + score/10);
-        }});
-
-        // COMPETITIVE MODE BOTS
+        // COMP BOTS
         bots = this.physics.add.group();
         if(currentMode === 'comp') {
-            for(let i=0; i<2; i++) {
-                let b = bots.create(Phaser.Math.Between(100,900), 200, 'z_blue').setTint(0x555555);
-                b.setCollideWorldBounds(true); b.setBounce(1); b.setVelocity(150, 150);
+            for(let i=0; i<2; i++){
+                let b = bots.create(400, 300, 'z_blue').setTint(0x444444);
+                b.setCollideWorldBounds(true); b.setBounce(1); b.setVelocity(100, 100);
             }
         }
 
-        this.physics.add.overlap(player, [enemies, bots], () => {
-            if(score > save.hi) { save.hi = score; localStorage.setItem('z_save_v5', JSON.stringify(save)); }
-            location.reload();
+        // DEATH LOGIC
+        this.physics.add.overlap(player, skull, () => {
+            // Check if inside safe zone
+            let boundsA = player.getBounds();
+            let boundsB = safeZone.getBounds();
+            if(!Phaser.Geom.Intersects.RectangleToRectangle(boundsA, boundsB)) {
+                if(score > save.hi) save.hi = score;
+                localStorage.setItem('z_skull_v1', JSON.stringify(save));
+                location.reload();
+            }
         });
     }
 
     function update() {
         score++;
-        scoreTxt.setText(currentMode.toUpperCase() + " SCORE: " + score);
+        scoreTxt.setText("SCORE: " + score);
 
-        // PRECISION MOVEMENT (Rotation-based, No Grid, No Drift)
-        if (cursors.left.isDown) player.setAngularVelocity(-280);
-        else if (cursors.right.isDown) player.setAngularVelocity(280);
+        // Skull AI: Chases player constantly
+        this.physics.moveToObject(skull, player, 160 + (score/20));
+
+        // Randomize Safe Zone position every 500 points
+        if(score % 500 === 0) {
+            safeZone.x = Phaser.Math.Between(150, 850);
+            safeZone.y = Phaser.Math.Between(150, 550);
+        }
+
+        // MOVEMENT
+        if (cursors.left.isDown) player.setAngularVelocity(-260);
+        else if (cursors.right.isDown) player.setAngularVelocity(260);
         else player.setAngularVelocity(0);
 
-        if (cursors.up.isDown) this.physics.velocityFromRotation(player.rotation, 400, player.body.velocity);
-        else if (cursors.down.isDown) this.physics.velocityFromRotation(player.rotation, -200, player.body.velocity);
+        if (cursors.up.isDown) this.physics.velocityFromRotation(player.rotation, 380, player.body.velocity);
+        else if (cursors.down.isDown) this.physics.velocityFromRotation(player.rotation, -150, player.body.velocity);
         else player.setVelocity(0);
     }
     </script>
