@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+    <style>
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        canvas { border: 4px solid #444; }
+    </style>
+</head>
+<body>
+    <script>
+    class MenuScene extends Phaser.Scene {
+        constructor() { super('MenuScene'); }
+        create() {
+            this.add.text(400, 150, 'CYBER ZAMBONI', { fontSize: '64px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
+            const btn = (y, txt, clr, mode) => {
+                this.add.text(400, y, txt, { fontSize: '32px', fill: '#fff', backgroundColor: clr, padding: 15 })
+                    .setOrigin(0.5).setInteractive({ useHandCursor: true })
+                    .on('pointerdown', () => this.scene.start('GameScene', { mode: mode }));
+            };
+            btn(300, ' STORY MODE ', '#800080', 'story');
+            btn(420, ' ENDLESS MODE ', '#006666', 'endless');
+        }
+    }
+
+    class GameScene extends Phaser.Scene {
+        constructor() { super('GameScene'); }
+
+        init(data) {
+            this.mode = data.mode || 'endless';
+            this.level = 1;
+            this.score = 0;
+            this.isDead = false;
+        }
+
+        preload() {
+            let z = this.textures.createCanvas('zamboni', 40, 30);
+            z.context.fillStyle = '#ff0000'; z.context.fillRect(2, 2, 36, 26);
+            z.refresh();
+
+            let s = this.textures.createCanvas('skull', 32, 32);
+            s.context.fillStyle = '#ffffff'; s.context.fillRect(8, 4, 16, 20);
+            s.context.fillStyle = '#000'; s.context.fillRect(10, 10, 4, 6); s.context.fillRect(18, 10, 4, 6);
+            s.refresh();
+        }
+
+        create() {
+            this.setupRink();
+            
+            // Safe Zone
+            this.safeZone = this.add.rectangle(400, 300, 120, 120, 0x00ffff, 0.1);
+            this.safeZone.setStrokeStyle(2, 0x00ffff);
+            this.physics.add.existing(this.safeZone, true);
+
+            this.pucks = this.physics.add.group();
+            this.spawnPucks();
+
+            this.player = this.physics.add.sprite(400, 450, 'zamboni');
+            this.skulls = this.physics.add.group();
+            this.skulls.create(400, 100, 'skull').setScale(1.8);
+            
+            this.physics.add.collider(this.player, this.walls);
+            this.physics.add.collider(this.skulls, this.walls);
+            this.physics.add.collider(this.skulls, this.safeZone);
+
+            this.scoreText = this.add.text(20, 20, 'SCORE: 0', { fontSize: '24px', fill: '#00ffff' });
+            this.physics.add.overlap(this.player, this.pucks, (p, puck) => {
+                puck.destroy();
+                this.score += 10;
+                this.scoreText.setText('SCORE: ' + this.score);
+                if (this.mode === 'story' && this.score >= 100 && this.level === 1) {
+                    this.level = 2;
+                    this.cameras.main.setBackgroundColor('#1a0505');
+                } else if (this.mode === 'story' && this.score >= 300 && this.level === 2) {
+                    this.level = 3;
+                    this.skulls.create(100, 100, 'skull').setScale(1.8).setTint(0xff0000);
+                }
+                if(this.pucks.countActive(true) === 0) this.spawnPucks();
+            });
+
+            this.physics.add.overlap(this.player, this.skulls, this.gameOver, null, this);
+            this.cursors = this.input.keyboard.createCursorKeys();
+        }
+
+        setupRink() {
+            this.cameras.main.setBackgroundColor('#0a0a12');
+            let graphics = this.add.graphics();
+            graphics.lineStyle(2, 0xffffff, 0.1);
+            graphics.strokeCircle(400, 300, 80);
+            graphics.strokeRect(350, 20, 100, 40);
+            graphics.strokeRect(350, 540, 100, 40);
+
+            this.walls = this.physics.add.staticGroup();
+            const drawWall = (x, y, w, h) => {
+                let b = this.add.rectangle(x, y, w, h, 0x111111);
+                b.setStrokeStyle(3, 0xbc00ff);
+                this.walls.add(b);
+            };
+            drawWall(400, 10, 800, 20); drawWall(400, 590, 800, 20);
+            drawWall(10, 300, 20, 600); drawWall(790, 300, 20, 600);
+        }
+
+        spawnPucks() {
+            for(let i=0; i<8; i++) {
+                let p = this.add.circle(Phaser.Math.Between(50, 750), Phaser.Math.Between(50, 550), 6, 0xffffff);
+                p.setStrokeStyle(4, 0x00ffff);
+                this.pucks.add(p);
+            }
+        }
+
+        gameOver() {
+            if (this.isDead) return;
+            this.isDead = true;
+            this.physics.pause();
+            
+            this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+            this.add.text(400, 250, 'GAME OVER', { fontSize: '64px', fill: '#f00' }).setOrigin(0.5);
+            this.add.text(400, 350, 'PRESS ANY KEY OR CLICK TO RESTART', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
+
+            // THE SIMPLE FIX: Listen to the entire browser window
+            const restartAction = () => {
+                window.removeEventListener('keydown', restartAction);
+                window.removeEventListener('mousedown', restartAction);
+                this.scene.start('GameScene', { mode: this.mode });
+            };
+
+            window.addEventListener('keydown', restartAction);
+            window.addEventListener('mousedown', restartAction);
+        }
+
+        update() {
+            if (this.isDead) return;
+            this.player.body.setVelocity(0);
+            const speed = 320;
+            if (this.cursors.left.isDown) this.player.body.setVelocityX(-speed);
+            else if (this.cursors.right.isDown) this.player.body.setVelocityX(speed);
+            if (this.cursors.up.isDown) this.player.body.setVelocityY(-speed);
+            else if (this.cursors.down.isDown) this.player.body.setVelocityY(speed);
+
+            this.skulls.getChildren().forEach(s => {
+                this.physics.moveToObject(s, this.player, 160 + (this.score * 0.15));
+            });
+            this.physics.world.wrap(this.player, 25);
+        }
+    }
+
+    new Phaser.Game({
+        type: Phaser.AUTO, width: 800, height: 600,
+        physics: { default: 'arcade' },
+        scene: [MenuScene, GameScene]
+    });
+    </script>
+</body>
+</html>
